@@ -15,6 +15,7 @@ from starlette.concurrency import run_in_threadpool
 
 from fastexec.version import get_version
 
+T = typing.TypeVar("T")
 __version__ = get_version()
 
 
@@ -112,3 +113,36 @@ async def exec_with_dependant(
     # For async functions:
     final_result = await call_any_function(dependant.call, **solved.values)
     return final_result
+
+
+class FastExec(typing.Generic[T]):
+    def __init__(
+        self,
+        call: typing.Union[
+            typing.Callable[..., T],
+            typing.Callable[..., typing.Awaitable[T]],
+        ],
+        *args,
+        **kwargs,
+    ):
+        self.dependant = get_dependant(call=call)
+
+    async def exec(
+        self,
+        *,
+        query_params: typing.Optional[
+            typing.Union[typing.Dict, pydantic.BaseModel]
+        ] = None,
+        headers: typing.Optional[
+            typing.Union[typing.Mapping[typing.Text, typing.Text], pydantic.BaseModel]
+        ] = None,
+        body: typing.Optional[typing.Union[typing.Any, pydantic.BaseModel]] = None,
+        **kwargs,
+    ) -> T:
+        return await exec_with_dependant(
+            dependant=self.dependant,
+            query_params=query_params,
+            headers=headers,
+            body=body,
+            **kwargs,
+        )
