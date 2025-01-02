@@ -1,7 +1,9 @@
+import functools
 import pathlib
 import typing
 
 
+@functools.lru_cache(maxsize=1)
 def get_version() -> typing.Text:
     ver_txt_file = pathlib.Path(__file__).parent.joinpath("VERSION")
     if not ver_txt_file.is_file():
