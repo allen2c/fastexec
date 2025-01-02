@@ -1,0 +1,37 @@
+[tool.poetry]
+authors = ["AllenChou <f1470891079@gmail.com>"]
+description = "Execute function with FastAPI features."
+license = "MIT"
+name = "fastexec"
+readme = "README.md"
+version = "0.1.0"
+
+[tool.poetry.dependencies]
+fastapi = { extras = ["standard"], version = "*" }
+python = ">=3.12,<4.0"
+
+[tool.poetry.extras]
+all = []
+
+[tool.poetry.group.dev.dependencies]
+black = { extras = ["jupyter"], version = "*" }
+faker = "*"
+isort = "*"
+poetry-plugin-export = "^1.6.0"
+pytest = "^8"
+pytest-asyncio = "*"
+pytest-cov = "^4"
+pytest-xdist = "^3"
+scipy = "*"
+setuptools = ">=69"
+
+[tool.isort]
+profile = "black"
+
+[tool.flake8]
+ignore = ["E203", "E704", "W503"]
+max-line-length = 88
+
+[build-system]
+build-backend = "poetry.core.masonry.api"
+requires = ["poetry-core"]
