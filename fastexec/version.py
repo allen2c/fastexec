@@ -3,4 +3,7 @@ import typing
 
 
 def get_version() -> typing.Text:
-    return pathlib.Path(__file__).parent.parent.joinpath("VERSION").read_text().strip()
+    ver_txt_file = pathlib.Path(__file__).parent.joinpath("VERSION")
+    if not ver_txt_file.is_file():
+        raise FileNotFoundError(f"Version file not found: {ver_txt_file}")
+    return ver_txt_file.read_text().strip()
