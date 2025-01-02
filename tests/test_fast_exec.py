@@ -24,9 +24,9 @@ async def test_exec_with_dependant():
         "notify_completion": 0,
     }
 
-    def get_config():
+    def get_config(request: fastapi.Request):
         call_counts["get_config"] += 1
-        return config
+        return {**config, "state": request.state._state}
 
     def get_db(config: dict = fastapi.Depends(get_config)):
         call_counts["get_db"] += 1
@@ -91,6 +91,7 @@ async def test_exec_with_dependant():
             "price": 29.99,
             "tax": 2.5,
         },
+        state={"key": "value"},
     )
 
     # Assertions to verify the expected outcomes
@@ -128,3 +129,4 @@ async def test_exec_with_dependant():
     assert (
         call_counts["notify_completion"] == 1
     ), "notify_completion should be called once."
+    assert result.get("state") == {"key": "value"}, "State was not passed correctly."

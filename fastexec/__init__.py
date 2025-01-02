@@ -54,6 +54,7 @@ async def exec_with_dependant(
         typing.Union[typing.Mapping[typing.Text, typing.Text], pydantic.BaseModel]
     ] = None,
     body: typing.Optional[typing.Union[typing.Any, pydantic.BaseModel]] = None,
+    state: typing.Optional[typing.Dict] = None,
 ) -> typing.Any:
 
     _query_params: typing.Dict = (
@@ -82,6 +83,7 @@ async def exec_with_dependant(
             "headers": dict_to_asgi_headers(_headers),
             "client": ("127.0.0.1", 8000),
             "content-length": str(len(_body_bytes)).encode("utf-8"),
+            "state": state or {},
         },
         receive=lambda: asyncio.Future(),
     )
