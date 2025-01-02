@@ -6,50 +6,48 @@ from fastexec import exec_with_dependant, get_dependant
 
 @pytest.mark.asyncio
 async def test_exec_with_dependant():
+    # Configuration setup
+    config = {
+        "app_name": "DAG Processor",
+        "db_connection_string": "sqlite:///./test.db",
+        "api_key": "secret_api_key",
+    }
 
     def get_config():
-        config = {
-            "app_name": "DAG Processor",
-            "db_connection_string": "sqlite:///./test.db",
-            "api_key": "secret_api_key",
-        }
-        print("Config initialized.")
         return config
 
     def get_db(config: dict = fastapi.Depends(get_config)):
-        db_connection = f"Connected to database with {config['db_connection_string']}"
-        print("Database connection established.")
-        return db_connection
+        return f"Connected to database with {config['db_connection_string']}"
 
     def get_auth_service(config: dict = fastapi.Depends(get_config)):
-        auth_service = f"Auth service initialized with API key {config['api_key']}"
-        print("Authentication service initialized.")
-        return auth_service
-
-    # --- DAG Tasks ---
+        return f"Auth service initialized with API key {config['api_key']}"
 
     def initialize_resources(
         db: str = fastapi.Depends(get_db),
         auth_service: str = fastapi.Depends(get_auth_service),
+        config: dict = fastapi.Depends(get_config),
     ):
-        print(f"Initializing resources with DB: {db} and Auth: {auth_service}")
-        return {"resources_initialized": True}
+        return {
+            **config,
+            "resources_initialized": True,
+            "db": db,
+            "auth_service": auth_service,
+        }
 
     def process_data(initialization: dict = fastapi.Depends(initialize_resources)):
-        print("Processing data...")
-        # Simulate data processing
-        processed_data = {"data": "Processed Data"}
-        print("Data processed.")
-        return processed_data
+        return {
+            **initialization,
+            "processed_data": {"data": "Processed Data"},
+        }
 
     def save_results(
         data: dict = fastapi.Depends(process_data),
         db: str = fastapi.Depends(get_db),
     ):
-        print(f"Saving results to DB: {db}")
-        # Simulate saving data
-        print(f"Results saved: {data}")
-        return {"results_saved": True}
+        return {
+            **data,
+            "results_saved": True,
+        }
 
     async def notify_completion(
         request: fastapi.Request,
@@ -57,14 +55,12 @@ async def test_exec_with_dependant():
         save: dict = fastapi.Depends(save_results),
         auth_service: str = fastapi.Depends(get_auth_service),
     ):
-        print("path_params:", request.path_params)
-        print("query_params:", request.query_params)
-        print("headers:", request.headers)
-        print("body:", body)
-        print("body:", await request.body())
-        print(f"Notifying via {auth_service} that processing is complete.")
-        return {"notification_sent": True}
+        return {
+            **save,
+            "notification_sent": True,
+        }
 
+    # Execute the dependant function
     dependant = get_dependant(path="/", call=notify_completion)
     result = await exec_with_dependant(
         dependant=dependant,
@@ -80,4 +76,22 @@ async def test_exec_with_dependant():
             "tax": 2.5,
         },
     )
-    print(result)
+
+    # Assertions to verify the expected outcomes
+    assert (
+        result.get("notification_sent") is True
+    ), "Notification was not sent successfully."
+    assert (
+        result.get("resources_initialized") is True
+    ), "Resources were not initialized."
+    assert result.get("processed_data") == {
+        "data": "Processed Data"
+    }, "Data was not processed correctly."
+    assert result.get("results_saved") is True, "Results were not saved."
+    assert (
+        result.get("db") == "Connected to database with sqlite:///./test.db"
+    ), "Database connection string mismatch."
+    assert (
+        result.get("auth_service")
+        == "Auth service initialized with API key secret_api_key"
+    ), "Auth service initialization failed."
