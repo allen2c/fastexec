@@ -21,24 +21,14 @@ T = typing.TypeVar("T")
 async def exec_with_dependant(
     *,
     dependant: fastapi.dependencies.models.Dependant,
-    query_params: typing.Optional[typing.Union[typing.Dict, pydantic.BaseModel]] = None,
-    headers: typing.Optional[
-        typing.Union[typing.Mapping[typing.Text, typing.Text], pydantic.BaseModel]
-    ] = None,
+    query_params: typing.Optional[fastexec.utils.convert.JSONObject] = None,
+    headers: typing.Optional[fastexec.utils.convert.JSONObject] = None,
     body: typing.Optional[typing.Union[typing.Any, pydantic.BaseModel]] = None,
     state: typing.Optional[typing.Dict] = None,
 ) -> typing.Any:
 
-    _query_params: typing.Dict = (
-        json.loads(query_params.model_dump_json())
-        if isinstance(query_params, pydantic.BaseModel)
-        else query_params
-    ) or {}
-    _headers: typing.Mapping[typing.Text, typing.Text] = (
-        json.loads(headers.model_dump_json())
-        if isinstance(headers, pydantic.BaseModel)
-        else headers
-    ) or {}
+    _query_params = fastexec.utils.convert.to_query_params(query_params)
+    _headers = fastexec.utils.convert.to_headers(headers)
     _body = (
         json.loads(body.model_dump_json())
         if isinstance(body, pydantic.BaseModel)
@@ -106,12 +96,8 @@ class FastExec(typing.Generic[T]):
     async def exec(
         self,
         *,
-        query_params: typing.Optional[
-            typing.Union[typing.Dict, pydantic.BaseModel]
-        ] = None,
-        headers: typing.Optional[
-            typing.Union[typing.Mapping[typing.Text, typing.Text], pydantic.BaseModel]
-        ] = None,
+        query_params: typing.Optional[fastexec.utils.convert.JSONObject] = None,
+        headers: typing.Optional[fastexec.utils.convert.JSONObject] = None,
         body: typing.Optional[typing.Union[typing.Any, pydantic.BaseModel]] = None,
         **kwargs,
     ) -> T:
