@@ -22,7 +22,6 @@ pytest = "^8"
 pytest-asyncio = "*"
 pytest-cov = "^4"
 pytest-xdist = "^3"
-scipy = "*"
 setuptools = ">=69"
 
 [tool.isort]
