@@ -19,6 +19,7 @@ type JSONSerializable = typing.Union[
 type JSONObject = typing.Union[typing.Dict, pydantic.BaseModel, typing.Text, bytes]
 type QueryParams = typing.Mapping[typing.Text, typing.Any]
 type Headers = typing.Mapping[typing.Text, typing.Text]
+type Body = typing.Dict[typing.Text, typing.Any]
 
 
 def dict_to_asgi_headers(
@@ -57,3 +58,21 @@ def to_headers(data: typing.Optional[JSONObject] = None) -> Headers:
         return {k: str(v) for k, v in json.loads(data).items()}
     logger.debug(f"Undefined headers type: {type(data)}, try to convert to dict")
     return {k: str(v) for k, v in dict(data).items()}  # type: ignore
+
+
+def to_body(data: typing.Optional[JSONObject] = None) -> Body | bytes:
+    if data is None:
+        return {}
+    elif isinstance(data, pydantic.BaseModel):
+        return json.loads(data.model_dump_json())
+    elif isinstance(data, typing.Dict):
+        return json.loads(json.dumps(data, default=str))
+    elif isinstance(data, typing.Text):
+        return json.loads(data)
+    elif isinstance(data, bytes):
+        try:
+            return json.loads(data)
+        except json.JSONDecodeError:
+            return data  # Is bytes
+    logger.debug(f"Undefined body type: {type(data)}, try to convert to dict")
+    return json.loads(json.dumps(dict(data), default=str))  # type: ignore

@@ -29,12 +29,10 @@ async def exec_with_dependant(
 
     _query_params = fastexec.utils.convert.to_query_params(query_params)
     _headers = fastexec.utils.convert.to_headers(headers)
-    _body = (
-        json.loads(body.model_dump_json())
-        if isinstance(body, pydantic.BaseModel)
-        else body
-    ) or None
-    _body_bytes = json.dumps(_body).encode("utf-8") if _body else b""
+    _body = fastexec.utils.convert.to_body(body)
+    _body_bytes = (
+        json.dumps(_body).encode("utf-8") if isinstance(_body, typing.Dict) else _body
+    )
 
     request = starlette.requests.Request(
         scope={
