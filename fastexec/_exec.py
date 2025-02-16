@@ -25,6 +25,7 @@ async def exec_with_dependant(
     headers: typing.Optional[fastexec.utils.convert.JSONObject] = None,
     body: typing.Optional[typing.Union[typing.Any, pydantic.BaseModel]] = None,
     state: typing.Optional[typing.Dict] = None,
+    app_state: typing.Optional[typing.Dict] = None,
 ) -> typing.Any:
 
     _query_params = fastexec.utils.convert.to_query_params(query_params)
@@ -33,6 +34,11 @@ async def exec_with_dependant(
     _body_bytes = (
         json.dumps(_body).encode("utf-8") if isinstance(_body, typing.Dict) else _body
     )
+
+    # Create a mock app instance
+    app_instance = fastapi.FastAPI()
+    for _key, _value in (app_state or {}).items():
+        setattr(app_instance.state, _key, _value)
 
     request = starlette.requests.Request(
         scope={
@@ -44,6 +50,7 @@ async def exec_with_dependant(
             "client": ("127.0.0.1", 8000),
             "content-length": str(len(_body_bytes)).encode("utf-8"),
             "state": state or {},
+            "app": app_instance,
         },
         receive=lambda: asyncio.Future(),
     )
@@ -87,9 +94,11 @@ class FastExec(typing.Generic[T]):
             typing.Callable[..., typing.Awaitable[T]],
         ],
         *args,
+        state: typing.Optional[typing.Dict] = None,
         **kwargs,
     ):
         self.dependant = get_dependant(call=call)
+        self.app_state = state
 
     async def exec(
         self,
@@ -97,6 +106,7 @@ class FastExec(typing.Generic[T]):
         query_params: typing.Optional[fastexec.utils.convert.JSONObject] = None,
         headers: typing.Optional[fastexec.utils.convert.JSONObject] = None,
         body: typing.Optional[typing.Union[typing.Any, pydantic.BaseModel]] = None,
+        state: typing.Optional[typing.Dict] = None,
         **kwargs,
     ) -> T:
         return await exec_with_dependant(
@@ -104,5 +114,7 @@ class FastExec(typing.Generic[T]):
             query_params=query_params,
             headers=headers,
             body=body,
+            state=state,
+            app_state=self.app_state,
             **kwargs,
         )

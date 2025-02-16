@@ -24,9 +24,17 @@ async def test_exec_with_dependant():
         "notify_completion": 0,
     }
 
+    def get_app_name(request: fastapi.Request):
+        assert request.app.state.app_name
+        return request.app.state.app_name
+
+    def get_session_id(request: fastapi.Request):
+        assert request.state.session_id
+        return request.state.session_id
+
     def get_config(request: fastapi.Request):
         call_counts["get_config"] += 1
-        return {**config, "state": request.state._state}
+        return {**config}
 
     def get_db(config: dict = fastapi.Depends(get_config)):
         call_counts["get_db"] += 1
@@ -37,16 +45,22 @@ async def test_exec_with_dependant():
         return f"Auth service initialized with API key {config['api_key']}"
 
     def initialize_resources(
+        app_name: str = fastapi.Depends(get_app_name),
+        session_id: str = fastapi.Depends(get_session_id),
         db: str = fastapi.Depends(get_db),
         auth_service: str = fastapi.Depends(get_auth_service),
         config: dict = fastapi.Depends(get_config),
     ):
+        assert app_name
+        assert session_id
         call_counts["initialize_resources"] += 1
         return {
             **config,
             "resources_initialized": True,
             "db": db,
             "auth_service": auth_service,
+            "app_name": app_name,
+            "session_id": session_id,
         }
 
     def process_data(initialization: dict = fastapi.Depends(initialize_resources)):
@@ -78,7 +92,7 @@ async def test_exec_with_dependant():
             "notification_sent": True,
         }
 
-    app = FastExec(call=notify_completion)
+    app = FastExec(call=notify_completion, state={"app_name": "DAG Processor"})
     result = await app.exec(
         query_params={"key1": "value1", "key2": "value2", "key3": "value3"},
         headers={
@@ -91,7 +105,7 @@ async def test_exec_with_dependant():
             "price": 29.99,
             "tax": 2.5,
         },
-        state={"key": "value"},
+        state={"session_id": "test_session_id"},
     )
 
     # Assertions to verify the expected outcomes
@@ -129,4 +143,9 @@ async def test_exec_with_dependant():
     assert (
         call_counts["notify_completion"] == 1
     ), "notify_completion should be called once."
-    assert result.get("state") == {"key": "value"}, "State was not passed correctly."
+    assert (
+        result.get("session_id") == "test_session_id"
+    ), "State was not passed correctly."
+    assert (
+        result.get("app_name") == "DAG Processor"
+    ), "App state was not passed correctly."
