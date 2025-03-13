@@ -7,7 +7,7 @@ import pydantic
 logger = logging.getLogger("fastexec")
 
 
-type JSONSerializable = typing.Union[
+JSONSerializable = typing.Union[
     typing.Dict[typing.Text, typing.Any],
     typing.List[typing.Any],
     typing.Text,
@@ -16,10 +16,10 @@ type JSONSerializable = typing.Union[
     bool,
     None,
 ]
-type JSONObject = typing.Union[typing.Dict, pydantic.BaseModel, typing.Text, bytes]
-type QueryParams = typing.Mapping[typing.Text, typing.Any]
-type Headers = typing.Mapping[typing.Text, typing.Text]
-type Body = typing.Dict[typing.Text, typing.Any]
+JSONObject = typing.Union[typing.Dict, pydantic.BaseModel, typing.Text, bytes]
+QueryParams = typing.Mapping[typing.Text, typing.Any]
+Headers = typing.Mapping[typing.Text, typing.Text]
+Body = typing.Dict[typing.Text, typing.Any]
 
 
 def dict_to_asgi_headers(

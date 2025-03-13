@@ -20,12 +20,12 @@ format-all:
 		--exclude .conda
 
 install-all:
-	poetry install -E all --with dev
+	poetry install --all-extras --all-groups
 
 update-all:
 	poetry update
 	poetry export --without-hashes -f requirements.txt --output requirements.txt
-	poetry export --without-hashes -E all --with dev -f requirements.txt --output requirements-all.txt
+	poetry export --without-hashes -f requirements.txt --output requirements-all.txt --all-extras --all-groups
 
 # Docs
 mkdocs:
