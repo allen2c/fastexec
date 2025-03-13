@@ -1,5 +1,6 @@
 import asyncio
 import json
+import pathlib
 import typing
 from contextlib import AsyncExitStack
 from urllib.parse import urlencode
@@ -118,3 +119,13 @@ class FastExec(typing.Generic[T]):
             app_state=self.app_state,
             **kwargs,
         )
+
+    def save_dependant_graph_image(
+        self,
+        path: typing.Text | pathlib.Path,
+        *,
+        name: typing.Text = "Dependency Graph",
+    ):
+        from fastexec.utils.graph import save_dependant_graph_image
+
+        return save_dependant_graph_image(self.dependant, path, name=name)
