@@ -1,6 +1,6 @@
 # fastexec
 
-**Version:** 0.4.0
+**Version:** 0.5.0
 **License:** [MIT](LICENSE)
 
 Execute functions with FastAPI features—dependency injection, request/response objects, and more—without running a full server.
