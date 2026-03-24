@@ -1,6 +1,6 @@
 # Custom
 .cache
-.poetry.lock
+poetry.lock
 data
 
 # Byte-compiled / optimized / DLL files

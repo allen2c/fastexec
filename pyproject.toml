@@ -8,21 +8,23 @@ version = "0.6.0"
 
 [tool.poetry.dependencies]
 fastapi = { extras = ["standard"], version = ">=0.121.0,<1.0.0" }
-graphviz = { version = "^0", optional = true }
 python = ">=3.11,<4.0"
 
 [tool.poetry.extras]
-all = ["graphviz"]
+all = []
 
 [tool.poetry.group.dev.dependencies]
 black = { extras = ["jupyter"], version = "*" }
 faker = "*"
 isort = "*"
+networkx = "*"
+plotly = "*"
 poetry-plugin-export = "*"
 pytest = "*"
 pytest-asyncio = "*"
 pytest-cov = "*"
 pytest-xdist = "*"
+pyvis = "*"
 setuptools = ">=69"
 
 [tool.isort]
