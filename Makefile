@@ -1,23 +1,7 @@
 # Development
 format-all:
-	@isort . \
-		--skip setup.py \
-		--skip .venv \
-		--skip build \
-		--skip dist \
-		--skip __pycache__ \
-		--skip docs \
-		--skip static \
-		--skip .conda
-	@black . \
-		--exclude setup.py \
-		--exclude .venv \
-		--exclude build \
-		--exclude dist \
-		--exclude __pycache__ \
-		--exclude docs \
-		--exclude static \
-		--exclude .conda
+	@isort fastexec tests
+	@black fastexec tests
 
 install-all:
 	poetry install --all-extras --all-groups
@@ -33,4 +17,4 @@ mkdocs:
 
 # Tests
 pytest:
-	python -m pytest --cov=fastexec --cov-config=.coveragerc --cov-report=xml:coverage.xml
+	python -m pytest
