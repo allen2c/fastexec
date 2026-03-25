@@ -11,7 +11,6 @@ import pytest
 
 from fastexec import FastExec, Pipeline
 
-
 # --- 4.1 Same dependency called once within single exec ---
 
 

@@ -11,7 +11,6 @@ import pytest
 
 from fastexec import FastExec, Pipeline
 
-
 # --- 5.1 Query parameters ---
 
 
@@ -46,9 +45,7 @@ async def test_headers():
     pipeline.register("/auth", check_auth)
     app.include_pipeline(pipeline)
 
-    result = await app.exec(
-        "/auth", headers={"Authorization": "Bearer my_token"}
-    )
+    result = await app.exec("/auth", headers={"Authorization": "Bearer my_token"})
     assert result == {"token": "Bearer my_token"}
 
 

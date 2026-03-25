@@ -1,19 +1,19 @@
 # fastexec
 
-**Version:** 0.5.0
+**Version:** 0.6.0
 **License:** [MIT](LICENSE)
 
-Execute functions with FastAPI features—dependency injection, request/response objects, and more—without running a full server.
+Execute functions with FastAPI features—dependency injection, validation, response models, and more—without running a full server.
 
 ## Summary
 
-**fastexec** allows you to invoke a function as if it were a FastAPI endpoint, leveraging FastAPI's dependency-injection system. This is particularly useful for:
+**fastexec** lets you build and execute function pipelines using the same patterns as FastAPI: dependency injection via `Depends()`, Pydantic validation via type hints, response model filtering, and layered state management. No HTTP server required.
 
-- **Testing** and **debugging** routes and dependencies without spinning up the entire application.
-- **Dry-running** code that ordinarily depends on HTTP request and response objects.
-- **Refactoring** or **benchmarking** your API logic in isolation.
+Use cases:
 
-Under the hood, **fastexec** uses a lightweight, mocked request context that simulates FastAPI's environment so your dependencies "just work."
+- **Offline execution** of FastAPI-style endpoints (batch jobs, scripts, CLI tools)
+- **Testing** route logic and dependency chains without spinning up a server
+- **Workflow orchestration** with typed, validated pipelines
 
 ## Installation
 
@@ -23,7 +23,7 @@ Requires **Python 3.11+**.
 pip install fastexec
 ```
 
-For visualization support, include the optional graphviz dependency:
+For visualization support (dependency graph rendering):
 
 ```bash
 pip install fastexec[all]
@@ -31,218 +31,196 @@ pip install fastexec[all]
 
 ## Quick Start
 
-1. **Install and Import** fastexec.
-
-2. **Create your normal FastAPI dependencies** and endpoints:
-
-   ```python
-   import fastapi
-   from fastexec import FastExec
-
-   def my_dependency(request: fastapi.Request):
-       return request.headers.get("Authorization")
-
-   async def my_endpoint(auth: str = fastapi.Depends(my_dependency)):
-       return {"auth": auth}
-   ```
-
-3. **Wrap your endpoint with** `FastExec`:
-
-   ```python
-   import asyncio
-
-   async def main():
-       app = FastExec(call=my_endpoint)
-       result = await app.exec(
-           headers={"Authorization": "Bearer your_token_here"},
-       )
-       print(result)  # {'auth': 'Bearer your_token_here'}
-
-   asyncio.run(main())
-   ```
-
-## Usage
-
-### 1. Define Your Dependencies and Endpoint
-
-Just like any FastAPI route, define your standard dependencies:
-
-```python
-def get_api_key(request: fastapi.Request):
-    return request.headers.get("Authorization")
-
-def process_data(api_key: str = fastapi.Depends(get_api_key)):
-    # Implement your core logic
-    return {"authorized": bool(api_key), "api_key": api_key}
-```
-
-### 2. Create a `FastExec` Instance
-
-```python
-from fastexec import FastExec
-
-executor = FastExec(call=process_data)
-```
-
-The `call` parameter is the **function** or **async function** you want to invoke with dependency injection.
-
-### 3. Execute the Function
-
-Use the `.exec()` method to supply query parameters, headers, request body, or custom state:
-
 ```python
 import asyncio
+import fastapi
+from fastexec import FastExec, Pipeline
 
-async def run_logic():
-    result = await executor.exec(
-        query_params={"sort": "desc"},
-        headers={"Authorization": "Bearer example-token"},
-        body={"example": "payload"},
-        state={"session_id": "test_session_123"},
-    )
-    print(result)
+# Define a pipeline (like FastAPI's APIRouter)
+pipeline = Pipeline()
 
-asyncio.run(run_logic())
+@pipeline.register("/greet")
+async def greet(name: str = fastapi.Query("World")):
+    return {"message": f"Hello, {name}!"}
+
+# Create the app (like FastAPI())
+app = FastExec()
+app.include_pipeline(pipeline)
+
+# Execute
+async def main():
+    result = await app.exec("/greet", query_params={"name": "Alice"})
+    print(result)  # {'message': 'Hello, Alice!'}
+
+asyncio.run(main())
 ```
 
-**Arguments**:
+## Core Concepts
 
-- **`query_params`**: A dictionary-like object, converted into a `?key=value` style query string for your dependencies.
-- **`headers`**: A dictionary-like object representing HTTP headers (e.g., `"Authorization": "Bearer ..."`).
-- **`body`**: JSON-serializable object or raw bytes. If it's a dictionary or Pydantic model, it will be parsed as JSON and passed to body/`request.json()`.
-- **`state`**: A dictionary for per-request data stored on `request.state`.
-- **`state=...`** on the `FastExec(...)` constructor sets up `app.state` globally for your function calls.
+### FastExec (App) and Pipeline (Router)
 
-## Advanced Usage
-
-### Directly Calling Dependencies
-
-If you want full control, you can manually create a FastAPI "dependant" object and invoke it with `exec_with_dependant`:
+`FastExec` is the application object (analogous to `FastAPI()`). `Pipeline` is a route group (analogous to `APIRouter`).
 
 ```python
-from fastexec import get_dependant, exec_with_dependant
+from fastexec import FastExec, Pipeline
 
-def core_logic(data: dict = fastapi.Body(...)):
-    return {"processed": True, "data": data}
+users = Pipeline()
+orders = Pipeline()
 
-dependant = get_dependant(call=core_logic)
+@users.register("/list")
+async def list_users():
+    return [{"id": 1, "name": "Alice"}]
 
-result = await exec_with_dependant(
-    dependant=dependant,
-    body={"hello": "world"},
-    headers={"x-api-key": "12345"},
+@orders.register("/list")
+async def list_orders():
+    return [{"id": 101, "total": 42.0}]
+
+app = FastExec()
+app.include_pipeline(users, prefix="/users")
+app.include_pipeline(orders, prefix="/orders")
+
+# Dispatch by path
+await app.exec("/users/list")   # -> [{"id": 1, "name": "Alice"}]
+await app.exec("/orders/list")  # -> [{"id": 101, "total": 42.0}]
+```
+
+### Dependency Injection
+
+Three layers of dependencies cascade: **app → pipeline → endpoint**. All use FastAPI's `Depends()`.
+
+```python
+import fastapi
+from fastexec import FastExec, Pipeline
+
+async def app_auth(request: fastapi.Request):
+    """App-level dependency — runs for every endpoint."""
+    token = request.headers.get("authorization")
+    if not token:
+        raise fastapi.HTTPException(status_code=401, detail="Unauthorized")
+
+async def pipeline_logger():
+    """Pipeline-level dependency — runs for endpoints in this pipeline."""
+    print("Pipeline executing")
+
+async def get_user_id(user_id: int = fastapi.Query(...)):
+    return user_id
+
+pipeline = Pipeline(dependencies=[fastapi.Depends(pipeline_logger)])
+
+@pipeline.register("/profile")
+async def profile(uid: int = fastapi.Depends(get_user_id)):
+    return {"user_id": uid}
+
+app = FastExec(dependencies=[fastapi.Depends(app_auth)])
+app.include_pipeline(pipeline, prefix="/users")
+
+result = await app.exec(
+    "/users/profile",
+    query_params={"user_id": 42},
+    headers={"authorization": "Bearer token"},
 )
-print(result)  # {"processed": True, "data": {"hello": "world"}}
+# result == {"user_id": 42}
 ```
 
-This API is handy for low-level testing or custom injection beyond the `FastExec` class.
+### State Management
 
-### Passing Application State
-
-You can store application-wide data in `FastExec(..., state=...)`, which is then accessible via `request.app.state` in your dependencies. For example:
+App-level state is set via `FastExec(state=...)` and accessed through `request.app.state`. Per-request state is passed via `exec(state=...)` and accessed through `request.state`.
 
 ```python
-def read_app_name(request: fastapi.Request):
-    return request.app.state.app_name  # app_name is set in `state=...` dict
+app = FastExec(state={"db_url": "postgres://localhost/mydb"})
 
-async def example_endpoint(app_name: str = fastapi.Depends(read_app_name)):
-    return {"app_name": app_name}
+pipeline = Pipeline()
 
-# Setting a global app state
-app_exec = FastExec(call=example_endpoint, state={"app_name": "Test App"})
+@pipeline.register("/info")
+async def info(request: fastapi.Request):
+    return {
+        "db": request.app.state.db_url,
+        "session": request.state.session_id,
+    }
 
-result = await app_exec.exec()
-# result == {"app_name": "Test App"}
+app.include_pipeline(pipeline)
+
+result = await app.exec("/info", state={"session_id": "abc123"})
+# result == {"db": "postgres://localhost/mydb", "session": "abc123"}
 ```
 
-### Including `request.state`
+### Auto Validation via Type Hints
 
-When you call `.exec()`, you can also attach **per-request** state. This becomes available as `request.state`:
+Like FastAPI, type annotations drive runtime validation. Pydantic models as parameter types auto-parse the request body; return type annotations auto-filter the response.
 
 ```python
-result = await app_exec.exec(
-    state={"session_id": "session_001"},
-)
-# Access `request.state.session_id` inside your dependencies
+import pydantic
+
+class UserCreate(pydantic.BaseModel):
+    name: str
+    email: str
+
+class UserResponse(pydantic.BaseModel):
+    name: str
+    email: str
+
+pipeline = Pipeline()
+
+@pipeline.register("/create")
+async def create_user(user: UserCreate) -> UserResponse:
+    # Return extra fields — they'll be stripped by the return type
+    return {"name": user.name, "email": user.email, "internal_id": 999}
+
+app = FastExec()
+app.include_pipeline(pipeline, prefix="/users")
+
+result = await app.exec("/users/create", body={"name": "Alice", "email": "alice@example.com"})
+# result == {"name": "Alice", "email": "alice@example.com"}
+# "internal_id" is filtered out by the UserResponse return type
+```
+
+### Response Model and Status Code
+
+Explicit `response_model` and `status_code` can be set on `register()`:
+
+```python
+pipeline.register("/create", create_user, response_model=UserResponse, status_code=201)
+```
+
+### Nested Pipelines
+
+Pipelines can include other pipelines, just like FastAPI's nested routers:
+
+```python
+child = Pipeline()
+
+@child.register("/detail")
+async def detail():
+    return {"detail": "nested"}
+
+parent = Pipeline()
+parent.include_pipeline(child, prefix="/child")
+
+app = FastExec()
+app.include_pipeline(parent, prefix="/parent")
+
+await app.exec("/parent/child/detail")  # -> {"detail": "nested"}
 ```
 
 ## Dependency Visualization
 
-Understand your dependency tree with built-in visualization tools. This feature requires the graphviz extra:
+Understand your dependency tree with built-in visualization:
 
 ```bash
 pip install fastexec[all]
 ```
 
-### Visualizing Dependency Trees
-
-Visualize how your dependencies are connected to understand the execution flow:
-
 ```python
 from fastexec import get_dependant
 from fastexec.utils.graph import visualize_dependant, save_dependant_graph_image
 
-# Define your dependencies
-def get_config():
-    return {"api_key": "secret"}
-
-def get_auth(config: dict = fastapi.Depends(get_config)):
-    return f"Auth: {config['api_key']}"
-
-def process_data(auth: str = fastapi.Depends(get_auth)):
-    return {"result": f"Processed with {auth}"}
-
-# Get the dependant object
-dependant = get_dependant(call=process_data)
-
-# Option 1: Generate a Graphviz Digraph object
-graph = visualize_dependant(dependant, name="My API Dependencies")
-# You can customize further: graph.attr(rankdir="LR")
-graph.render("my_dependencies", format="png", cleanup=True)
-
-# Option 2: Direct to PNG
-save_dependant_graph_image(
-    dependant,
-    "dependencies.png",
-    name="Dependency Chain"
-)
-```
-
-The resulting image shows all functions in your dependency tree with arrows indicating the dependency flow:
-
-- Blue nodes represent internal dependencies
-- Green nodes represent the API path (when provided)
-- Orange nodes represent terminal nodes (endpoints)
-
-### Why Visualize Dependencies?
-
-- **Debugging**: Identify circular dependencies or complex chains
-- **Documentation**: Generate visual documentation of your API's internals
-- **Refactoring**: Understand where to simplify overly complex dependency trees
-- **Onboarding**: Help new team members understand the codebase structure
-
-### Advanced Visualization Options
-
-The visualization functions accept styling and formatting options:
-
-```python
-# Customize graph attributes
-dot = visualize_dependant(dependant)
-dot.attr(rankdir="LR")  # Left-to-right layout instead of top-to-bottom
-dot.attr(size="8,5")    # Set image size
-dot.node_attr.update(shape="rectangle", style="filled", color="lightblue")
-
-# Save with custom name
-save_dependant_graph_image(
-    dependant,
-    "custom_graph.png",
-    name="Production API Dependencies"
-)
+dependant = get_dependant(call=my_endpoint)
+save_dependant_graph_image(dependant, "deps.png", name="My Dependencies")
 ```
 
 ## Examples
 
-> See the [tests](./tests/) folder for full examples of how to wire up multiple dependencies, mock request bodies, pass custom state, handle async routes, and more.
+See the [tests/v060/](./tests/v060/) folder for comprehensive examples covering all features.
 
 ## Contributing
 
@@ -256,7 +234,7 @@ save_dependant_graph_image(
    ```bash
    make pytest
    ```
-5. **Open** a Pull Request. :rocket:
+5. **Open** a Pull Request.
 
 ## License
 

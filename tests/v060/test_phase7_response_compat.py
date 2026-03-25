@@ -16,7 +16,6 @@ import pytest
 
 from fastexec import FastExec, Pipeline
 
-
 # --- 7.1 Response model ---
 
 

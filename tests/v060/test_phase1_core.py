@@ -9,7 +9,6 @@ import pytest
 
 from fastexec import FastExec, Pipeline
 
-
 # --- 1.1 FastExec instantiation ---
 
 

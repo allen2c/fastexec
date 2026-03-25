@@ -19,7 +19,6 @@ import pytest
 
 from fastexec import FastExec, Pipeline
 
-
 # --- 8.1 Auto-parse body from type hint (no explicit Body()) ---
 
 
@@ -285,9 +284,7 @@ async def test_typed_body_with_depends():
     pipeline.register("/orders", create_order)
     app.include_pipeline(pipeline)
 
-    result = await app.exec(
-        "/orders", body={"product": "Widget", "quantity": 3}
-    )
+    result = await app.exec("/orders", body={"product": "Widget", "quantity": 3})
     assert result == {"product": "Widget", "quantity": 3, "db": "db_connection"}
 
 

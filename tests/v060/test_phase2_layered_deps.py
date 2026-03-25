@@ -13,7 +13,6 @@ import pytest
 
 from fastexec import FastExec, Pipeline
 
-
 # --- 2.1 Endpoint-level dependencies (via Depends) ---
 
 

@@ -10,7 +10,6 @@ import pytest
 
 from fastexec import FastExec, Pipeline
 
-
 # --- 3.1 App state ---
 
 

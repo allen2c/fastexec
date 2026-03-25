@@ -10,7 +10,6 @@ import pytest
 
 from fastexec import FastExec, Pipeline
 
-
 # --- 6.1 Multiple pipelines ---
 
 
