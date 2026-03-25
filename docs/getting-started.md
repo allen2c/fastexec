@@ -11,12 +11,6 @@
 pip install fastexec
 ```
 
-For dependency graph visualization support:
-
-```bash
-pip install fastexec[all]
-```
-
 ## Your First Pipeline
 
 ```python

@@ -23,12 +23,6 @@ Requires **Python 3.11+**.
 pip install fastexec
 ```
 
-For visualization support (dependency graph rendering):
-
-```bash
-pip install fastexec[all]
-```
-
 ## Quick Start
 
 ```python
@@ -200,22 +194,6 @@ app = FastExec()
 app.include_pipeline(parent, prefix="/parent")
 
 await app.exec("/parent/child/detail")  # -> {"detail": "nested"}
-```
-
-## Dependency Visualization
-
-Understand your dependency tree with built-in visualization:
-
-```bash
-pip install fastexec[all]
-```
-
-```python
-from fastexec import get_dependant
-from fastexec.utils.graph import visualize_dependant, save_dependant_graph_image
-
-dependant = get_dependant(call=my_endpoint)
-save_dependant_graph_image(dependant, "deps.png", name="My Dependencies")
 ```
 
 ## Examples
