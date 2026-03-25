@@ -1,8 +1,5 @@
 """
-Phase 6: Advanced Features
-Dependencies: Phase 1-5
-
-Tests nested pipelines, multiple pipelines, and decorator patterns.
+Advanced: nested pipelines, multiple pipelines, and full integration.
 """
 
 import fastapi
@@ -10,7 +7,7 @@ import pytest
 
 from fastexec import FastExec, Pipeline
 
-# --- 6.1 Multiple pipelines ---
+# --- Multiple pipelines ---
 
 
 @pytest.mark.asyncio
@@ -37,7 +34,7 @@ async def test_multiple_pipelines():
     assert await app.exec("/orders/list") == {"resource": "orders"}
 
 
-# --- 6.2 Nested pipelines (sub-pipelines) ---
+# --- Nested pipelines (sub-pipelines) ---
 
 
 @pytest.mark.asyncio
@@ -60,7 +57,7 @@ async def test_nested_pipelines():
     assert result == {"items": [1, 2, 3]}
 
 
-# --- 6.3 Pipeline-isolated dependencies ---
+# --- Pipeline-isolated dependencies ---
 
 
 @pytest.mark.asyncio
@@ -93,7 +90,7 @@ async def test_pipelines_have_isolated_dependencies():
     assert (await app.exec("/user/profile"))["role"] == "user"
 
 
-# --- 6.4 Decorator with all features combined ---
+# --- Full integration ---
 
 
 @pytest.mark.asyncio

@@ -1,25 +1,271 @@
 """
-Phase 8: Auto Validation via Type Hints
-Dependencies: Phase 1, Phase 5, Phase 7
-
-Tests that fastexec automatically parses and validates input/output
-based on type annotations, mirroring FastAPI's behavior:
-- Function param typed as Pydantic model → body auto-parsed & validated
-- Return type annotation → response auto-validated & serialized
-- Nested models, Optional, List, Union — all respected
-- No need for explicit Body() / response_model — typing IS the schema
+Validation: response models, status codes, exceptions, and auto validation via type hints.
 """
 
 import typing
 
 import fastapi
 import fastapi.exceptions
+import fastapi.responses
 import pydantic
 import pytest
 
 from fastexec import FastExec, Pipeline
 
-# --- 8.1 Auto-parse body from type hint (no explicit Body()) ---
+# ============================================================
+# Response model
+# ============================================================
+
+
+class UserOut(pydantic.BaseModel):
+    id: int
+    name: str
+
+
+@pytest.mark.asyncio
+async def test_response_model():
+    """Endpoint can declare a response_model, output is serialized accordingly."""
+    app = FastExec()
+    pipeline = Pipeline()
+
+    async def get_user():
+        return {"id": 1, "name": "Alice", "secret": "should_be_stripped"}
+
+    pipeline.register("/user", get_user, response_model=UserOut)
+    app.include_pipeline(pipeline)
+
+    result = await app.exec("/user")
+    assert result == {"id": 1, "name": "Alice"}
+    assert "secret" not in result
+
+
+# ============================================================
+# Status code
+# ============================================================
+
+
+@pytest.mark.asyncio
+async def test_status_code_default():
+    """Default status code is 200."""
+    app = FastExec()
+    pipeline = Pipeline()
+
+    async def handler():
+        return {"ok": True}
+
+    pipeline.register("/ok", handler)
+    app.include_pipeline(pipeline)
+
+    response = await app.exec("/ok")
+    assert response == {"ok": True}
+
+
+@pytest.mark.asyncio
+async def test_status_code_custom():
+    """Endpoint can declare a custom status_code."""
+    app = FastExec()
+    pipeline = Pipeline()
+
+    async def create_item():
+        return {"id": 1, "name": "Widget"}
+
+    pipeline.register("/items", create_item, status_code=201)
+    app.include_pipeline(pipeline)
+
+    response = await app.exec("/items")
+    assert response == {"id": 1, "name": "Widget"}
+
+
+@pytest.mark.asyncio
+async def test_response_model_with_status_code():
+    """response_model and status_code work together."""
+
+    class ItemOut(pydantic.BaseModel):
+        id: int
+        name: str
+
+    app = FastExec()
+    pipeline = Pipeline()
+
+    async def create_item():
+        return {"id": 1, "name": "Widget", "internal_note": "strip_this"}
+
+    pipeline.register("/items", create_item, response_model=ItemOut, status_code=201)
+    app.include_pipeline(pipeline)
+
+    result = await app.exec("/items")
+    assert result == {"id": 1, "name": "Widget"}
+    assert "internal_note" not in result
+
+
+# ============================================================
+# HTTPException
+# ============================================================
+
+
+@pytest.mark.asyncio
+async def test_http_exception_404():
+    """HTTPException raised in endpoint propagates with correct status."""
+    app = FastExec()
+    pipeline = Pipeline()
+
+    async def get_user():
+        raise fastapi.HTTPException(status_code=404, detail="User not found")
+
+    pipeline.register("/user", get_user)
+    app.include_pipeline(pipeline)
+
+    with pytest.raises(fastapi.HTTPException) as exc_info:
+        await app.exec("/user")
+
+    assert exc_info.value.status_code == 404
+    assert exc_info.value.detail == "User not found"
+
+
+@pytest.mark.asyncio
+async def test_http_exception_403():
+    """HTTPException with 403 Forbidden."""
+    app = FastExec()
+    pipeline = Pipeline()
+
+    async def admin_only():
+        raise fastapi.HTTPException(status_code=403, detail="Forbidden")
+
+    pipeline.register("/admin", admin_only)
+    app.include_pipeline(pipeline)
+
+    with pytest.raises(fastapi.HTTPException) as exc_info:
+        await app.exec("/admin")
+
+    assert exc_info.value.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_http_exception_in_dependency():
+    """HTTPException raised in a dependency propagates correctly."""
+    app = FastExec()
+    pipeline = Pipeline()
+
+    def verify_token(authorization: str = fastapi.Header()):
+        if authorization != "Bearer valid":
+            raise fastapi.HTTPException(status_code=401, detail="Invalid token")
+        return "verified"
+
+    async def handler(auth: str = fastapi.Depends(verify_token)):
+        return {"auth": auth}
+
+    pipeline.register("/secure", handler)
+    app.include_pipeline(pipeline)
+
+    with pytest.raises(fastapi.HTTPException) as exc_info:
+        await app.exec("/secure", headers={"Authorization": "Bearer invalid"})
+
+    assert exc_info.value.status_code == 401
+    assert exc_info.value.detail == "Invalid token"
+
+
+# ============================================================
+# Request validation error
+# ============================================================
+
+
+@pytest.mark.asyncio
+async def test_validation_error_missing_required_query():
+    """Missing required query param raises RequestValidationError."""
+    app = FastExec()
+    pipeline = Pipeline()
+
+    async def search(q: str = fastapi.Query()):
+        return {"q": q}
+
+    pipeline.register("/search", search)
+    app.include_pipeline(pipeline)
+
+    with pytest.raises(fastapi.exceptions.RequestValidationError):
+        await app.exec("/search")  # missing required 'q'
+
+
+@pytest.mark.asyncio
+async def test_validation_error_wrong_type():
+    """Wrong type for query param raises RequestValidationError."""
+    app = FastExec()
+    pipeline = Pipeline()
+
+    async def get_page(page: int = fastapi.Query()):
+        return {"page": page}
+
+    pipeline.register("/page", get_page)
+    app.include_pipeline(pipeline)
+
+    with pytest.raises(fastapi.exceptions.RequestValidationError):
+        await app.exec("/page", query_params={"page": "not_a_number"})
+
+
+@pytest.mark.asyncio
+async def test_validation_error_invalid_body():
+    """Invalid body against Pydantic model raises RequestValidationError."""
+
+    class ItemCreate(pydantic.BaseModel):
+        name: str
+        price: float
+
+    app = FastExec()
+    pipeline = Pipeline()
+
+    async def create_item(item: ItemCreate):
+        return {"name": item.name, "price": item.price}
+
+    pipeline.register("/items", create_item)
+    app.include_pipeline(pipeline)
+
+    with pytest.raises(fastapi.exceptions.RequestValidationError):
+        await app.exec("/items", body={"name": "Widget"})  # missing 'price'
+
+
+# ============================================================
+# JSONResponse / Response objects
+# ============================================================
+
+
+@pytest.mark.asyncio
+async def test_return_json_response():
+    """Endpoint can return a JSONResponse directly."""
+    app = FastExec()
+    pipeline = Pipeline()
+
+    async def handler():
+        return fastapi.responses.JSONResponse(
+            content={"msg": "created"}, status_code=201
+        )
+
+    pipeline.register("/create", handler)
+    app.include_pipeline(pipeline)
+
+    result = await app.exec("/create")
+    assert isinstance(result, fastapi.responses.JSONResponse)
+    assert result.status_code == 201
+
+
+@pytest.mark.asyncio
+async def test_return_plain_response():
+    """Endpoint can return a plain Response."""
+    app = FastExec()
+    pipeline = Pipeline()
+
+    async def handler():
+        return fastapi.Response(content="OK", media_type="text/plain", status_code=200)
+
+    pipeline.register("/health", handler)
+    app.include_pipeline(pipeline)
+
+    result = await app.exec("/health")
+    assert isinstance(result, fastapi.Response)
+    assert result.body == b"OK"
+
+
+# ============================================================
+# Auto validation via type hints
+# ============================================================
 
 
 class CreateUserRequest(pydantic.BaseModel):
@@ -81,9 +327,6 @@ async def test_auto_parse_body_type_coercion():
     assert result["age_type"] == "int"
 
 
-# --- 8.2 Auto-validate response from return type annotation ---
-
-
 class UserResponse(pydantic.BaseModel):
     id: int
     name: str
@@ -122,7 +365,9 @@ async def test_auto_response_validation_error():
         await app.exec("/user")
 
 
-# --- 8.3 Nested models ---
+# ============================================================
+# Nested models
+# ============================================================
 
 
 class Address(pydantic.BaseModel):
@@ -178,7 +423,9 @@ async def test_nested_model_validation_error():
         )
 
 
-# --- 8.4 List and Optional types ---
+# ============================================================
+# List and Optional types
+# ============================================================
 
 
 class Item(pydantic.BaseModel):
@@ -229,9 +476,6 @@ async def test_optional_body_fields():
     assert result == {"name": "Bob", "email": None}
 
 
-# --- 8.5 Multiple body params with type hints ---
-
-
 @pytest.mark.asyncio
 async def test_multiple_typed_body_params():
     """Multiple Pydantic model params are embedded as sub-keys in body."""
@@ -256,9 +500,6 @@ async def test_multiple_typed_body_params():
         body={"user": {"name": "Alice"}, "item": {"title": "Widget"}},
     )
     assert result == {"user_name": "Alice", "item_title": "Widget"}
-
-
-# --- 8.6 Type hint + Depends coexistence ---
 
 
 @pytest.mark.asyncio
@@ -286,9 +527,6 @@ async def test_typed_body_with_depends():
 
     result = await app.exec("/orders", body={"product": "Widget", "quantity": 3})
     assert result == {"product": "Widget", "quantity": 3, "db": "db_connection"}
-
-
-# --- 8.7 Return type List[Model] ---
 
 
 @pytest.mark.asyncio

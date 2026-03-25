@@ -1,19 +1,26 @@
 import asyncio
+import inspect
 import json
 import typing
 from contextlib import AsyncExitStack
 from urllib.parse import urlencode
 
 import fastapi
+import fastapi.dependencies.models
 import fastapi.dependencies.utils
 import fastapi.exceptions
 import pydantic
+import starlette.concurrency
 import starlette.requests
 
 import fastexec.utils.convert
-import fastexec.utils.coro
-from fastexec._dep import get_dependant
 from fastexec._pipeline import Pipeline
+
+
+def get_dependant(
+    *, path: str = "/", call: typing.Callable
+) -> fastapi.dependencies.models.Dependant:
+    return fastapi.dependencies.utils.get_dependant(path=path, call=call)
 
 
 class _RouteInfo(typing.NamedTuple):
@@ -156,9 +163,12 @@ class FastExec:
             if solved.errors:
                 raise fastapi.exceptions.RequestValidationError(solved.errors)
 
-            result = await fastexec.utils.coro.call_any_function(
-                endpoint, **solved.values
-            )
+            if inspect.iscoroutinefunction(endpoint):
+                result = await endpoint(**solved.values)
+            else:
+                result = await starlette.concurrency.run_in_threadpool(
+                    endpoint, **solved.values
+                )
 
         # Apply response_model filtering
         if response_model is not None and not isinstance(result, fastapi.Response):

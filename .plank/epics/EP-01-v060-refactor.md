@@ -1,9 +1,9 @@
 ---
 id: EP-01
 title: v0.6.0 Architecture Refactor
-status: todo
+status: done
 created: 2026-03-24
-updated: 2026-03-24
+updated: 2026-03-25
 ---
 
 # v0.6.0 Architecture Refactor
@@ -34,16 +34,16 @@ Architecture mapping:
 
 | ID     | Title                                              | Status |
 |--------|----------------------------------------------------|--------|
-| FE-001 | Implement FastExec and Pipeline core skeleton      | todo   |
-| FE-002 | Implement layered dependency injection             | todo   |
-| FE-003 | Implement state management                         | todo   |
-| FE-004 | Implement request-scope dependency caching         | todo   |
-| FE-005 | Implement request parameter passing                | todo   |
-| FE-006 | Implement nested pipelines and advanced features   | todo   |
-| FE-007 | Implement FastAPI response and exception compat    | todo   |
-| FE-008 | Implement auto validation via type hints           | todo   |
-| FE-009 | Remove legacy API and finalize breaking changes    | todo   |
+| FE-001 | Implement FastExec and Pipeline core skeleton      | done   |
+| FE-002 | Implement layered dependency injection             | done   |
+| FE-003 | Implement state management                         | done   |
+| FE-004 | Implement request-scope dependency caching         | done   |
+| FE-005 | Implement request parameter passing                | done   |
+| FE-006 | Implement nested pipelines and advanced features   | done   |
+| FE-007 | Implement FastAPI response and exception compat    | done   |
+| FE-008 | Implement auto validation via type hints           | done   |
+| FE-009 | Remove legacy API and finalize breaking changes    | done   |
 
 ## Notes
 
-Test-first approach: all 54 dummy tests across 8 phases are written in `tests/v060/` before implementation begins. Each issue corresponds to one phase of tests.
+Test-first approach: all 58 tests across 8 phases written in `tests/v060/`. All passing as of 2026-03-25.

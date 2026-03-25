@@ -1,15 +1,12 @@
 """
-Phase 1: Core Skeleton
-Dependencies: None (foundation)
-
-Tests the basic FastExec + Pipeline + registration + dispatch flow.
+Core: FastExec + Pipeline instantiation, registration, and dispatch.
 """
 
 import pytest
 
 from fastexec import FastExec, Pipeline
 
-# --- 1.1 FastExec instantiation ---
+# --- FastExec instantiation ---
 
 
 @pytest.mark.asyncio
@@ -26,7 +23,7 @@ async def test_fastexec_creation_with_state():
     assert app.state.db == "sqlite:///test.db"
 
 
-# --- 1.2 Pipeline instantiation ---
+# --- Pipeline instantiation ---
 
 
 @pytest.mark.asyncio
@@ -36,7 +33,7 @@ async def test_pipeline_creation():
     assert pipeline is not None
 
 
-# --- 1.3 Registering endpoints on Pipeline ---
+# --- Registering endpoints on Pipeline ---
 
 
 @pytest.mark.asyncio
@@ -60,7 +57,7 @@ async def test_pipeline_register_decorator():
         return [{"id": 1, "name": "Alice"}]
 
 
-# --- 1.4 Including Pipeline in FastExec ---
+# --- Including Pipeline in FastExec ---
 
 
 @pytest.mark.asyncio
@@ -89,7 +86,7 @@ async def test_include_pipeline_with_prefix():
     app.include_pipeline(pipeline, prefix="/api/v1")
 
 
-# --- 1.5 Dispatch via exec ---
+# --- Dispatch via exec ---
 
 
 @pytest.mark.asyncio

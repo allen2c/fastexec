@@ -220,7 +220,7 @@ save_dependant_graph_image(dependant, "deps.png", name="My Dependencies")
 
 ## Examples
 
-See the [tests/v060/](./tests/v060/) folder for comprehensive examples covering all features.
+See the [tests/](./tests/) folder for comprehensive examples covering all features.
 
 ## Contributing
 

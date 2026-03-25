@@ -1,5 +1,4 @@
-from fastexec._dep import get_dependant
-from fastexec._exec import FastExec
+from fastexec._exec import FastExec, get_dependant
 from fastexec._pipeline import Pipeline
 from fastexec.version import version
 

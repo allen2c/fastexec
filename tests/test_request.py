@@ -1,8 +1,5 @@
 """
-Phase 5: Request Parameters
-Dependencies: Phase 1, Phase 3
-
-Tests passing query_params, headers, and body through exec().
+Request: passing query_params, headers, and body through exec().
 """
 
 import fastapi
@@ -11,7 +8,7 @@ import pytest
 
 from fastexec import FastExec, Pipeline
 
-# --- 5.1 Query parameters ---
+# --- Query parameters ---
 
 
 @pytest.mark.asyncio
@@ -30,7 +27,7 @@ async def test_query_params():
     assert result == {"q": "hello", "page": 2}
 
 
-# --- 5.2 Headers ---
+# --- Headers ---
 
 
 @pytest.mark.asyncio
@@ -49,7 +46,7 @@ async def test_headers():
     assert result == {"token": "Bearer my_token"}
 
 
-# --- 5.3 Body ---
+# --- Body ---
 
 
 @pytest.mark.asyncio
@@ -89,7 +86,7 @@ async def test_body_pydantic_model():
     assert result == {"created": "Alice", "email": "alice@test.com"}
 
 
-# --- 5.4 Combined params ---
+# --- Combined params ---
 
 
 @pytest.mark.asyncio

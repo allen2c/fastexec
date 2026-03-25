@@ -1,8 +1,5 @@
 """
-Phase 3: State Management
-Dependencies: Phase 1
-
-Tests app state and request state access across layers.
+State: app state and request state access across layers.
 """
 
 import fastapi
@@ -10,7 +7,7 @@ import pytest
 
 from fastexec import FastExec, Pipeline
 
-# --- 3.1 App state ---
+# --- App state ---
 
 
 @pytest.mark.asyncio
@@ -32,7 +29,7 @@ async def test_app_state_accessible_in_endpoint():
     assert result == {"app_name": "TestApp", "version": "1.0"}
 
 
-# --- 3.2 Request state ---
+# --- Request state ---
 
 
 @pytest.mark.asyncio
@@ -51,7 +48,7 @@ async def test_request_state_per_exec():
     assert result == {"session_id": "abc-123"}
 
 
-# --- 3.3 App state + request state coexist ---
+# --- App state + request state coexist ---
 
 
 @pytest.mark.asyncio
@@ -73,7 +70,7 @@ async def test_app_state_and_request_state_coexist():
     assert result == {"db": "postgres://localhost", "user_id": "user-42"}
 
 
-# --- 3.4 State accessible in dependencies ---
+# --- State accessible in dependencies ---
 
 
 @pytest.mark.asyncio
@@ -95,7 +92,7 @@ async def test_state_accessible_in_dependencies():
     assert result == {"auth": "auth_with_s3cret"}
 
 
-# --- 3.5 State isolation between exec calls ---
+# --- State isolation between exec calls ---
 
 
 @pytest.mark.asyncio
