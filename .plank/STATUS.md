@@ -10,6 +10,9 @@ Last reviewed: 2026-03-25
 
 | ID     | Title                                            | Completed  |
 |--------|--------------------------------------------------|------------|
+| FE-012 | GitHub Actions — docs deploy to GitHub Pages     | 2026-03-25 |
+| FE-011 | mkdocs-material docs framework                   | 2026-03-25 |
+| FE-010 | GitHub Actions — pytest CI                       | 2026-03-25 |
 | FE-001 | Implement FastExec and Pipeline core skeleton    | 2026-03-25 |
 | FE-002 | Implement layered dependency injection           | 2026-03-25 |
 | FE-003 | Implement state management                       | 2026-03-25 |

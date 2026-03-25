@@ -27,6 +27,10 @@ pytest-xdist = "*"
 pyvis = "*"
 setuptools = ">=69"
 
+[tool.poetry.group.docs.dependencies]
+mkdocs-material = "*"
+mkdocstrings = { extras = ["python"], version = "*" }
+
 [tool.isort]
 profile = "black"
 
