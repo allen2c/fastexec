@@ -20,6 +20,7 @@ dev = [
   "setuptools>=69",
 ]
 docs = ["mkdocs-material", "mkdocstrings[python]"]
+viz = ["graphviz"]
 
 [build-system]
 build-backend = "hatchling.build"

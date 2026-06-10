@@ -1,6 +1,7 @@
 """
 DI caching: per-route compilation is reused, not rebuilt per exec.
 """
+
 import fastapi
 import pydantic
 import pytest

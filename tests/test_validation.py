@@ -1,5 +1,5 @@
 """
-Validation: response models, status codes, exceptions, and auto validation via type hints.
+Validation: response models, exceptions, and auto validation from type hints.
 """
 
 import typing

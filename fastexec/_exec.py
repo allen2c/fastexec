@@ -45,7 +45,7 @@ class _State:
 
 
 class FastExec:
-    """v0.6.0 app object — analogous to FastAPI()."""
+    """App object — analogous to FastAPI()."""
 
     def __init__(
         self,
@@ -98,9 +98,7 @@ class FastExec:
                 response_model = return_annotation
 
         type_adapter = (
-            pydantic.TypeAdapter(response_model)
-            if response_model is not None
-            else None
+            pydantic.TypeAdapter(response_model) if response_model is not None else None
         )
         return _CompiledRoute(
             dependant=dependant,

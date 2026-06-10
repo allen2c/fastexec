@@ -5,6 +5,7 @@ Runs ~90k exec() calls covering a yield dependency, a response_model,
 and two error paths (HTTPException + RequestValidationError), then asserts
 RSS and GC-tracked object counts stay flat between two post-warmup checkpoints.
 """
+
 import gc
 
 import fastapi
