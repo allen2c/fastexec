@@ -4,7 +4,7 @@ Guidance for AI agents and contributors working on **fastexec**. Keep changes sm
 
 ## What fastexec is
 
-A **serverless workflow engine** whose DAG executor *is* FastAPI's dependency injection: a `Depends()` is a node's input edge, the return value is its output, the dependency graph is the workflow DAG, and `exec(path, ...)` runs it in-process — no HTTP server. The public API is intentionally tiny: `FastExec` (app) and `Router` (optional grouping).
+A **serverless workflow engine** whose DAG executor *is* FastAPI's dependency injection: a `Depends()` is a node's input edge, the return value is its output, the dependency graph is the workflow DAG, and `exec(path, ...)` runs it in-process — no HTTP server. The public API is intentionally tiny: `FastExec` (app) and `Router` (optional grouping), plus workflow-vocabulary aliases (`Workflow`=`Router`, `Task`=`fastapi.Depends`, `@app.workflow`=`route`, `app.run`=`exec`) — the *same objects*, documented as aliases; keep them in sync if the originals change.
 
 fastexec **subclasses FastAPI**: `FastExec(FastAPI)` (`_app.py`), `Router(APIRouter)` + a `_RouteMixin.route()` verbless decorator (`_routing.py`). `exec()` finds a route via Starlette matching and runs `solve_dependencies` over the route's native `.dependant` (FastAPI already merges app + router + endpoint deps).
 
