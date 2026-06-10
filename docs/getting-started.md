@@ -11,26 +11,20 @@
 pip install fastexec
 ```
 
-## Your First Pipeline
+## Your First Workflow
 
 ```python
 import asyncio
 import fastapi
-from fastexec import FastExec, Pipeline
+from fastexec import FastExec
 
-# 1. Create a Pipeline (like APIRouter)
-pipeline = Pipeline()
+app = FastExec()
 
-# 2. Register an endpoint
-@pipeline.register("/hello")
+# A node graph: greet takes the `name` query input.
+@app.route("/hello")
 async def hello(name: str = fastapi.Query("World")):
     return {"message": f"Hello, {name}!"}
 
-# 3. Create the app and include the pipeline
-app = FastExec()
-app.include_pipeline(pipeline)
-
-# 4. Execute
 async def main():
     result = await app.exec("/hello", query_params={"name": "Alice"})
     print(result)  # {'message': 'Hello, Alice!'}
@@ -40,23 +34,25 @@ asyncio.run(main())
 
 ## Key Patterns
 
-### Multiple Pipelines with Prefixes
+### Grouping with a Router (prefixes)
 
 ```python
-users = Pipeline()
-orders = Pipeline()
+from fastexec import FastExec, Router
 
-@users.register("/list")
+users = Router()
+orders = Router()
+
+@users.route("/list")
 async def list_users():
     return [{"id": 1, "name": "Alice"}]
 
-@orders.register("/list")
+@orders.route("/list")
 async def list_orders():
     return [{"id": 101, "total": 42.0}]
 
 app = FastExec()
-app.include_pipeline(users, prefix="/users")
-app.include_pipeline(orders, prefix="/orders")
+app.include_router(users, prefix="/users")
+app.include_router(orders, prefix="/orders")
 
 await app.exec("/users/list")   # [{"id": 1, "name": "Alice"}]
 await app.exec("/orders/list")  # [{"id": 101, "total": 42.0}]
@@ -64,10 +60,10 @@ await app.exec("/orders/list")  # [{"id": 101, "total": 42.0}]
 
 ### Sync Functions
 
-Both sync and async endpoint functions work transparently:
+Both sync and async nodes work transparently:
 
 ```python
-@pipeline.register("/sync")
+@app.route("/sync")
 def sync_endpoint():
     return {"mode": "sync"}
 
@@ -86,14 +82,14 @@ with pytest.raises(LookupError):
 FastAPI exceptions pass through as-is:
 
 ```python
-@pipeline.register("/secure")
+@app.route("/secure")
 async def secure():
     raise fastapi.HTTPException(status_code=401, detail="Unauthorized")
 ```
 
 ## Next Steps
 
-- [App & Pipeline](concepts/app-pipeline.md)
+- [App & Router](concepts/app-router.md)
 - [Dependency Injection](concepts/dependency-injection.md)
 - [State Management](concepts/state.md)
 - [Validation](concepts/validation.md)

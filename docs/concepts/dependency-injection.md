@@ -1,49 +1,49 @@
 # Dependency Injection
 
-fastexec reuses FastAPI's dependency injection engine directly. If you know `Depends()` in FastAPI, it works identically here.
+fastexec *is* FastAPI's dependency injection — the dependency graph is your workflow DAG. If you know `Depends()`, you already know how to build workflows here.
 
 ## Three Layers
 
-Dependencies cascade from app → pipeline → endpoint. All three layers run for each `exec()` call.
+Dependencies cascade from app → router → endpoint. All run before the terminal node, on every `exec()`.
 
 ```plaintext
 app.exec("/path")
-  └── app dependencies        (e.g., auth check)
-      └── pipeline dependencies  (e.g., logging)
-          └── endpoint dependencies  (e.g., get current user)
-              └── endpoint function
+  ├── app dependencies       (FastExec(dependencies=[...]))
+  ├── router dependencies    (Router(dependencies=[...]))
+  ├── endpoint dependencies  (Depends(...) on the route function)
+  └── the route function (the terminal node)
 ```
 
 ```python
 import fastapi
-from fastexec import FastExec, Pipeline
+from fastexec import FastExec, Router
 
 async def app_dep():
     print("app dep")
 
-async def pipeline_dep():
-    print("pipeline dep")
+async def router_dep():
+    print("router dep")
 
-async def endpoint_dep():
-    return "dep_value"
+async def node_dep():
+    return "value"
 
-pipeline = Pipeline(dependencies=[fastapi.Depends(pipeline_dep)])
+router = Router(dependencies=[fastapi.Depends(router_dep)])
 
-@pipeline.register("/example")
-async def example(value: str = fastapi.Depends(endpoint_dep)):
+@router.route("/example")
+async def example(value: str = fastapi.Depends(node_dep)):
     return {"value": value}
 
 app = FastExec(dependencies=[fastapi.Depends(app_dep)])
-app.include_pipeline(pipeline)
+app.include_router(router)
 
 await app.exec("/example")
-# prints: "app dep", "pipeline dep"
-# returns: {"value": "dep_value"}
+# prints: "app dep", "router dep"
+# returns: {"value": "value"}
 ```
 
-## Request-Scope Caching
+## Request-Scope Caching (memoization)
 
-Within a single `exec()` call, each dependency function is called at most once. Repeated use of the same dependency returns the cached result.
+Within a single `exec()`, each dependency runs at most once; repeated use of the same dependency reuses the cached result. This is what makes a shared node in the DAG run once.
 
 ```python
 call_count = 0
@@ -55,26 +55,18 @@ def counted_dep():
 
 async def handler(
     a: int = fastapi.Depends(counted_dep),
-    b: int = fastapi.Depends(counted_dep),  # same dep — reuses cached result
+    b: int = fastapi.Depends(counted_dep),  # same node — reuses the cached result
 ):
     return {"a": a, "b": b}
 
 # a == b == 1, call_count == 1
 ```
 
-Caching is scoped to the request — the next `exec()` call starts fresh.
+The cache is scoped to the run — the next `exec()` starts fresh. Opt a node out with `Depends(fn, use_cache=False)`.
 
-## Compilation Caching
+## Accessing State in Nodes
 
-The first time you `exec()` a path, fastexec compiles that route's dependency graph (the merged app → pipeline → endpoint `Depends()` tree) and its response-model adapter, then reuses them on every later call to the same path. Running `exec()` in a loop does not rebuild them.
-
-This caches the *structure*, not the *values* — your dependency functions still run on every call (the request-scope caching above is per-`exec()`, unchanged). Only the wiring is reused.
-
-Because compilation is frozen after the first call to a path, register all routes and set app/pipeline dependencies **before** the first `exec()`.
-
-## Accessing State in Dependencies
-
-Dependencies receive the full `Request` object, so they can read app state and request state:
+Nodes receive the full `Request`, so they can read app and request state:
 
 ```python
 def get_db(request: fastapi.Request):
@@ -83,7 +75,7 @@ def get_db(request: fastapi.Request):
 def get_session(request: fastapi.Request):
     return request.state.session_id
 
-@pipeline.register("/info")
+@app.route("/info")
 async def info(
     db: str = fastapi.Depends(get_db),
     session: str = fastapi.Depends(get_session),
@@ -93,7 +85,7 @@ async def info(
 
 ## Dependency Chains
 
-Dependencies can depend on other dependencies:
+Nodes can depend on other nodes:
 
 ```python
 def get_token(request: fastapi.Request):
@@ -102,7 +94,7 @@ def get_token(request: fastapi.Request):
 def get_user(token: str = fastapi.Depends(get_token)):
     return {"user": f"user_for_{token}"}
 
-@pipeline.register("/profile")
+@app.route("/profile")
 async def profile(user: dict = fastapi.Depends(get_user)):
     return user
 ```

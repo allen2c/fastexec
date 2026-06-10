@@ -1,7 +1,7 @@
 [project]
 authors = [{ name = "AllenChou", email = "f1470891079@gmail.com" }]
 dependencies = ["fastapi[standard]>=0.121.0,<1.0.0"]
-description = "Execute function with FastAPI features."
+description = "Define and run serverless workflows with FastAPI's dependency injection."
 license = "MIT"
 name = "fastexec"
 readme = "README.md"
@@ -12,9 +12,7 @@ version = "0.7.0"
 dev = [
   "black",
   "faker",
-  "graphviz",
   "isort",
-  "psutil",
   "pytest",
   "pytest-asyncio",
   "pytest-cov",
@@ -47,8 +45,4 @@ profile = "black"
 line_length = 88
 
 [tool.pytest.ini_options]
-addopts = ["-m", "not stress"]
 asyncio_mode = "auto"
-markers = [
-  "stress: long-running memory/leak stress tests (run manually with -m stress)",
-]

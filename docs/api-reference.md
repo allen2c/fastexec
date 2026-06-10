@@ -6,6 +6,6 @@
 
 ---
 
-## fastexec.Pipeline
+## fastexec.Router
 
-::: fastexec.Pipeline
+::: fastexec.Router

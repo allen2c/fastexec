@@ -1,19 +1,13 @@
 # fastexec
 
-**Execute functions with FastAPI features — no server required.**
+**Define a workflow as a typed dependency graph and run it serverlessly — no HTTP server.**
 
 [![PyPI](https://img.shields.io/pypi/v/fastexec)](https://pypi.org/project/fastexec/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/allen2c/fastexec/blob/main/LICENSE)
 
 ---
 
-**fastexec** lets you build and execute function pipelines using the same patterns as FastAPI: dependency injection via `Depends()`, Pydantic validation via type hints, response model filtering, and layered state management.
-
-Use cases:
-
-- **Offline execution** of FastAPI-style endpoints (batch jobs, scripts, CLI tools)
-- **Testing** route logic and dependency chains without spinning up a server
-- **Workflow orchestration** with typed, validated pipelines
+fastexec is a serverless workflow engine whose DAG executor *is* FastAPI's dependency injection. A `Depends()` is a node's input edge, the return value is its output, the dependency graph is the workflow DAG, and resolution order is execution order — with shared nodes memoized. It subclasses FastAPI, so behaviour is 100% FastAPI.
 
 ## Installation
 
@@ -26,16 +20,13 @@ pip install fastexec
 ```python
 import asyncio
 import fastapi
-from fastexec import FastExec, Pipeline
-
-pipeline = Pipeline()
-
-@pipeline.register("/greet")
-async def greet(name: str = fastapi.Query("World")):
-    return {"message": f"Hello, {name}!"}
+from fastexec import FastExec
 
 app = FastExec()
-app.include_pipeline(pipeline)
+
+@app.route("/greet")
+async def greet(name: str = fastapi.Query("World")):
+    return {"message": f"Hello, {name}!"}
 
 async def main():
     result = await app.exec("/greet", query_params={"name": "Alice"})
@@ -46,6 +37,6 @@ asyncio.run(main())
 
 ## Next Steps
 
-- [Getting Started](getting-started.md) — installation, first pipeline, key patterns
-- [Concepts](concepts/app-pipeline.md) — deep dives into each feature
+- [Getting Started](getting-started.md) — installation, your first workflow, key patterns
+- [Concepts](concepts/app-router.md) — deep dives into each feature
 - [API Reference](api-reference.md) — full API documentation
