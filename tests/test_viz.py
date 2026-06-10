@@ -143,3 +143,39 @@ def test_path_with_pipeline_raises_typeerror():
 
     with pytest.raises(TypeError):
         viz.visualize(pipeline, path="/p")
+
+
+def test_endpoint_label_shows_route_path():
+    app = _build_app()
+    g = viz.visualize(app, path="/v1/profile")
+    assert "/v1/profile" in g.source  # endpoint node shows its route
+
+
+def test_legend_is_rendered_with_plain_language():
+    app = _build_app()
+    g = viz.visualize(app, path="/v1/profile")
+    assert "Legend" in g.source  # a legend cluster exists
+    assert "app guard" in g.source  # colour meaning spelled out (not "app-guard")
+    assert "pipeline guard" in g.source
+
+
+def test_special_nodes_have_plain_language_tags():
+    app = _build_app()
+    g = viz.visualize(app, path="/v1/profile")
+    assert "no cache" in g.source  # use_cache=False tag
+    assert "yield" in g.source  # yield-dependency tag
+
+
+def test_legend_omits_absent_layers():
+    # A bare route with no guards/deps -> legend shows only "endpoint".
+    pipeline = Pipeline()
+
+    @pipeline.register("/bare")
+    async def bare():
+        return {}
+
+    app = FastExec()
+    app.include_pipeline(pipeline)
+    g = viz.visualize(app, path="/bare")
+    assert "app guard" not in g.source  # no app layer -> not in legend
+    assert "pipeline guard" not in g.source

@@ -22,23 +22,28 @@ _LAYER_FILL = {
     "pipeline": "#fdd0a2",
     "dep": "#f0f0f0",
 }
-_LEGEND = (
-    "layers: endpoint / app-guard / pipeline-guard / dep  ·  "
-    "dashed = use_cache=False  ·  box3d = yield dependency"
-)
+_LAYER_LABEL = {
+    "endpoint": "endpoint",
+    "app": "app guard",
+    "pipeline": "pipeline guard",
+    "dep": "dependency",
+}
+_CAPTION = 'arrows point to dependencies  (A → B means "A depends on B")'
 
 
 def visualize(target, *, path=None):
     """Render a fastexec app / pipeline / route's DI graph as a Digraph."""
     roots = _collect_roots(target, path)
     dot = graphviz.Digraph("fastexec-dependencies")
-    dot.attr(label=_LEGEND, labelloc="b", fontsize="10")
+    dot.attr(label=_CAPTION, labelloc="b", fontsize="10")
     dot.attr("node", shape="box")
     nodes = {}
     edges = set()
+    used = set()
     counter = itertools.count()
     for root, n_app, n_pipe in roots:
-        _add_root(dot, root, n_app, n_pipe, nodes, edges, counter)
+        _add_root(dot, root, n_app, n_pipe, nodes, edges, used, counter)
+    _add_legend(dot, used)
     return dot
 
 
@@ -70,8 +75,8 @@ def _root_tuple(app, path):
     )
 
 
-def _add_root(dot, root, n_app, n_pipe, nodes, edges, counter):
-    root_id, _ = _ensure_node(dot, root, "endpoint", nodes, counter)
+def _add_root(dot, root, n_app, n_pipe, nodes, edges, used, counter):
+    root_id, _ = _ensure_node(dot, root, "endpoint", nodes, used, counter)
     for i, child in enumerate(root.dependencies):
         if i < n_app:
             layer = "app"
@@ -79,27 +84,32 @@ def _add_root(dot, root, n_app, n_pipe, nodes, edges, counter):
             layer = "pipeline"
         else:
             layer = "dep"
-        child_id = _add_subtree(dot, child, layer, nodes, edges, counter)
+        child_id = _add_subtree(dot, child, layer, nodes, edges, used, counter)
         _add_edge(dot, root_id, child_id, edges)
     return root_id
 
 
-def _add_subtree(dot, dep, layer, nodes, edges, counter):
-    node_id, created = _ensure_node(dot, dep, layer, nodes, counter)
+def _add_subtree(dot, dep, layer, nodes, edges, used, counter):
+    node_id, created = _ensure_node(dot, dep, layer, nodes, used, counter)
     if created:
         for child in dep.dependencies:
-            child_id = _add_subtree(dot, child, "dep", nodes, edges, counter)
+            child_id = _add_subtree(dot, child, "dep", nodes, edges, used, counter)
             _add_edge(dot, node_id, child_id, edges)
     return node_id
 
 
-def _ensure_node(dot, dep, layer, nodes, counter):
+def _ensure_node(dot, dep, layer, nodes, used, counter):
     key = _node_key(dep, counter)
     if key in nodes:
         return nodes[key], False
     node_id = f"n{len(nodes)}"
     nodes[key] = node_id
-    dot.node(node_id, label=_label(dep), **_node_attrs(dep, layer))
+    used.add(layer)
+    if not dep.use_cache:
+        used.add("nocache")
+    if dep.is_async_gen_callable or dep.is_gen_callable:
+        used.add("yield")
+    dot.node(node_id, label=_label(dep, layer), **_node_attrs(dep, layer))
     return node_id, True
 
 
@@ -109,8 +119,18 @@ def _node_key(dep, counter):
     return ("nocache", next(counter))
 
 
-def _label(dep):
-    return getattr(dep.call, "__name__", None) or repr(dep.call)
+def _label(dep, layer):
+    name = getattr(dep.call, "__name__", None) or repr(dep.call)
+    if layer == "endpoint":
+        name = f"{name}\n{dep.path}"
+    tags = []
+    if not dep.use_cache:
+        tags.append("no cache")
+    if dep.is_async_gen_callable or dep.is_gen_callable:
+        tags.append("yield")
+    if tags:
+        name = f"{name}\n({', '.join(tags)})"
+    return name
 
 
 def _node_attrs(dep, layer):
@@ -130,3 +150,38 @@ def _add_edge(dot, parent_id, child_id, edges):
     if edge not in edges:
         edges.add(edge)
         dot.edge(parent_id, child_id)
+
+
+def _add_legend(dot, used):
+    items = []
+    for layer in ("endpoint", "app", "pipeline", "dep"):
+        if layer in used:
+            items.append(
+                (
+                    f"legend_{layer}",
+                    _LAYER_LABEL[layer],
+                    {"style": "filled", "fillcolor": _LAYER_FILL[layer]},
+                )
+            )
+    if "nocache" in used:
+        items.append(
+            (
+                "legend_nocache",
+                "no cache\n(runs every call)",
+                {"style": "filled,dashed", "fillcolor": _LAYER_FILL["dep"]},
+            )
+        )
+    if "yield" in used:
+        items.append(
+            (
+                "legend_yield",
+                "yield\n(setup / teardown)",
+                {"shape": "box3d", "style": "filled", "fillcolor": _LAYER_FILL["dep"]},
+            )
+        )
+    if not items:
+        return
+    with dot.subgraph(name="cluster_legend") as legend:
+        legend.attr(label="Legend", style="rounded", color="grey", fontsize="10")
+        for node_id, label, attrs in items:
+            legend.node(node_id, label=label, **attrs)
