@@ -9,9 +9,3 @@
 ## fastexec.Pipeline
 
 ::: fastexec.Pipeline
-
----
-
-## fastexec.get_dependant
-
-::: fastexec.get_dependant

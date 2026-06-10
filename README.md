@@ -168,12 +168,12 @@ result = await app.exec("/users/create", body={"name": "Alice", "email": "alice@
 # "internal_id" is filtered out by the UserResponse return type
 ```
 
-### Response Model and Status Code
+### Response Model
 
-Explicit `response_model` and `status_code` can be set on `register()`:
+Explicit `response_model` can be set on `register()`:
 
 ```python
-pipeline.register("/create", create_user, response_model=UserResponse, status_code=201)
+pipeline.register("/create", create_user, response_model=UserResponse)
 ```
 
 ### Nested Pipelines
@@ -199,6 +199,13 @@ await app.exec("/parent/child/detail")  # -> {"detail": "nested"}
 ## Examples
 
 See the [tests/](./tests/) folder for comprehensive examples covering all features.
+
+## Migrating from 0.6
+
+Two breaking changes:
+
+- **Route-level `status_code` removed.** `register()` no longer accepts `status_code`. To set a status code, return a `fastapi.Response` (e.g. `fastapi.responses.JSONResponse(content=..., status_code=201)`) — `exec()` returns it as-is.
+- **`get_dependant` left the public API.** Import it from the internal module if you still need it: `from fastexec._exec import get_dependant`.
 
 ## Contributing
 

@@ -61,7 +61,6 @@ pipeline.register(
     "/users",
     create_user,
     response_model=UserResponse,
-    status_code=201,
 )
 ```
 

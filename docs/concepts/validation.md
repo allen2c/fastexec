@@ -43,7 +43,7 @@ async def create_user(user: UserCreate) -> UserResponse:
 Set `response_model` explicitly on `register()` to override or supplement the return type:
 
 ```python
-pipeline.register("/users", create_user, response_model=UserResponse, status_code=201)
+pipeline.register("/users", create_user, response_model=UserResponse)
 ```
 
 When `response_model` is set explicitly, it takes precedence over the return type annotation.
