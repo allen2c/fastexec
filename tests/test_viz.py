@@ -116,3 +116,30 @@ def test_app_scope_shares_guards_across_routes():
     g = viz.visualize(app)  # whole app, two routes
     assert g.source.count("app_auth") == 1  # shared guard -> one node
     assert "route_alpha" in g.source and "route_beta" in g.source
+
+
+def test_visualize_pipeline_has_no_app_guard_layer():
+    async def pipe_log(): ...
+
+    pipeline = Pipeline(dependencies=[fastapi.Depends(pipe_log)])
+
+    @pipeline.register("/p")
+    async def pipe_route():
+        return {}
+
+    g = viz.visualize(pipeline)  # pipeline in isolation
+    assert "pipe_route" in g.source
+    assert "pipe_log" in g.source
+    # No app-level guard colour, since there is no app.
+    assert viz._LAYER_FILL["app"] not in g.source
+
+
+def test_path_with_pipeline_raises_typeerror():
+    pipeline = Pipeline()
+
+    @pipeline.register("/p")
+    async def p():
+        return {}
+
+    with pytest.raises(TypeError):
+        viz.visualize(pipeline, path="/p")

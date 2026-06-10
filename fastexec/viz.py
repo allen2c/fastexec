@@ -14,6 +14,7 @@ except ImportError as e:  # pragma: no cover
     ) from e
 
 from fastexec._exec import FastExec
+from fastexec._pipeline import Pipeline
 
 _LAYER_FILL = {
     "endpoint": "#9ecae1",
@@ -46,6 +47,12 @@ def _collect_roots(target, path):
         app = target
         if path is not None:
             return [_root_tuple(app, path)]
+        return [_root_tuple(app, p) for p in app._routes]
+    if isinstance(target, Pipeline):
+        if path is not None:
+            raise TypeError("path is only valid with a FastExec target")
+        app = FastExec()
+        app.include_pipeline(target)
         return [_root_tuple(app, p) for p in app._routes]
     raise TypeError(f"Cannot visualize {type(target).__name__}")
 
