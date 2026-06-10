@@ -32,8 +32,8 @@ line-length = 88
 select = ["E", "F", "I"]
 
 [tool.pytest.ini_options]
-asyncio_mode = "auto"
 addopts = ["-m", "not stress"]
+asyncio_mode = "auto"
 markers = [
   "stress: long-running memory/leak stress tests (run manually with -m stress)",
 ]
