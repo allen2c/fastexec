@@ -13,7 +13,7 @@ class UserCreate(pydantic.BaseModel):
     name: str
     email: str
 
-@pipeline.register("/users")
+@app.route("/users")
 async def create_user(user: UserCreate):
     return {"name": user.name, "email": user.email}
 
@@ -31,7 +31,7 @@ class UserResponse(pydantic.BaseModel):
     name: str
     email: str
 
-@pipeline.register("/users")
+@app.route("/users")
 async def create_user(user: UserCreate) -> UserResponse:
     return {"name": user.name, "email": user.email, "internal_id": 999}
 
@@ -40,20 +40,22 @@ async def create_user(user: UserCreate) -> UserResponse:
 
 ## Explicit response_model
 
-Set `response_model` explicitly on `register()` to override or supplement the return type:
+Set `response_model` explicitly on `@app.route(...)` to override or supplement the return type:
 
 ```python
-pipeline.register("/users", create_user, response_model=UserResponse, status_code=201)
+@app.route("/users", response_model=UserResponse)
+async def create_user(user: UserCreate):
+    ...
 ```
 
 When `response_model` is set explicitly, it takes precedence over the return type annotation.
 
 ## Generic Types
 
-Generic return types like `list[Model]` are supported via `pydantic.TypeAdapter`:
+Generic return types like `list[Model]` are supported, exactly as in FastAPI:
 
 ```python
-@pipeline.register("/users")
+@app.route("/users")
 async def list_users() -> list[UserResponse]:
     return [{"name": "Alice", "email": "alice@example.com", "internal_id": 999}]
 
@@ -74,7 +76,7 @@ raise fastapi.HTTPException(status_code=422, detail=[{"loc": [...], "msg": "..."
 Return a `fastapi.responses.JSONResponse` to control status code and headers:
 
 ```python
-@pipeline.register("/create")
+@app.route("/create")
 async def create():
     return fastapi.responses.JSONResponse(
         content={"id": 1},

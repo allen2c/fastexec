@@ -1,19 +1,23 @@
 # fastexec
 
-**Version:** 0.6.0
+**Version:** 0.7.0
 **License:** [MIT](LICENSE)
 
-Execute functions with FastAPI features—dependency injection, validation, response models, and more—without running a full server.
+Define a workflow as a typed dependency graph and run it serverlessly — no HTTP server.
 
 ## Summary
 
-**fastexec** lets you build and execute function pipelines using the same patterns as FastAPI: dependency injection via `Depends()`, Pydantic validation via type hints, response model filtering, and layered state management. No HTTP server required.
+fastexec is a **serverless workflow engine** whose DAG executor *is* FastAPI's dependency injection. A `Depends()` is a node's input edge, a function's return is its output, the dependency graph is the workflow DAG, and resolution order is execution order — with shared nodes memoized. You define workflows with the FastAPI patterns you already know, and run them in-process with `exec()`.
 
-Use cases:
+| Workflow concept | FastAPI mechanism |
+|---|---|
+| task / node | a function (dependency callable) |
+| node input | `param = Depends(upstream)` |
+| node output | the return value |
+| the DAG | the dependency graph |
+| run a workflow | `exec(path, inputs...)` |
 
-- **Offline execution** of FastAPI-style endpoints (batch jobs, scripts, CLI tools)
-- **Testing** route logic and dependency chains without spinning up a server
-- **Workflow orchestration** with typed, validated pipelines
+fastexec subclasses FastAPI, so behaviour is **100% FastAPI** — no new execution semantics.
 
 ## Installation
 
@@ -28,20 +32,14 @@ pip install fastexec
 ```python
 import asyncio
 import fastapi
-from fastexec import FastExec, Pipeline
+from fastexec import FastExec
 
-# Define a pipeline (like FastAPI's APIRouter)
-pipeline = Pipeline()
+app = FastExec()
 
-@pipeline.register("/greet")
+@app.route("/greet")
 async def greet(name: str = fastapi.Query("World")):
     return {"message": f"Hello, {name}!"}
 
-# Create the app (like FastAPI())
-app = FastExec()
-app.include_pipeline(pipeline)
-
-# Execute
 async def main():
     result = await app.exec("/greet", query_params={"name": "Alice"})
     print(result)  # {'message': 'Hello, Alice!'}
@@ -51,96 +49,69 @@ asyncio.run(main())
 
 ## Core Concepts
 
-### FastExec (App) and Pipeline (Router)
+### A workflow is a dependency graph
 
-`FastExec` is the application object (analogous to `FastAPI()`). `Pipeline` is a route group (analogous to `APIRouter`).
+Each `Depends()` is an upstream node; the function's parameters are its inputs and its return value is its output. `exec()` resolves the graph in execution order, memoizing shared nodes.
 
 ```python
-from fastexec import FastExec, Pipeline
+def get_token(request: fastapi.Request):
+    return "t"
 
-users = Pipeline()
-orders = Pipeline()
+def get_user(token: str = fastapi.Depends(get_token)):   # depends on get_token
+    return f"user-{token}"
 
-@users.register("/list")
-async def list_users():
-    return [{"id": 1, "name": "Alice"}]
+@app.route("/me")
+async def me(user: str = fastapi.Depends(get_user)):     # depends on get_user
+    return {"user": user}
 
-@orders.register("/list")
-async def list_orders():
-    return [{"id": 101, "total": 42.0}]
-
-app = FastExec()
-app.include_pipeline(users, prefix="/users")
-app.include_pipeline(orders, prefix="/orders")
-
-# Dispatch by path
-await app.exec("/users/list")   # -> [{"id": 1, "name": "Alice"}]
-await app.exec("/orders/list")  # -> [{"id": 101, "total": 42.0}]
+await app.exec("/me")  # -> {"user": "user-t"}
 ```
 
-### Dependency Injection
+### Grouping with Router
 
-Three layers of dependencies cascade: **app → pipeline → endpoint**. All use FastAPI's `Depends()`.
+`Router` (= FastAPI's `APIRouter`) groups workflows with shared dependencies and a prefix:
 
 ```python
 import fastapi
-from fastexec import FastExec, Pipeline
+from fastexec import FastExec, Router
 
-async def app_auth(request: fastapi.Request):
-    """App-level dependency — runs for every endpoint."""
-    token = request.headers.get("authorization")
-    if not token:
-        raise fastapi.HTTPException(status_code=401, detail="Unauthorized")
+async def auth(request: fastapi.Request):
+    if not request.headers.get("authorization"):
+        raise fastapi.HTTPException(status_code=401)
 
-async def pipeline_logger():
-    """Pipeline-level dependency — runs for endpoints in this pipeline."""
-    print("Pipeline executing")
+users = Router(dependencies=[fastapi.Depends(auth)])
 
-async def get_user_id(user_id: int = fastapi.Query(...)):
-    return user_id
+@users.route("/me")
+async def me():
+    return {"user": "alice"}
 
-pipeline = Pipeline(dependencies=[fastapi.Depends(pipeline_logger)])
+app = FastExec()
+app.include_router(users, prefix="/users")
 
-@pipeline.register("/profile")
-async def profile(uid: int = fastapi.Depends(get_user_id)):
-    return {"user_id": uid}
-
-app = FastExec(dependencies=[fastapi.Depends(app_auth)])
-app.include_pipeline(pipeline, prefix="/users")
-
-result = await app.exec(
-    "/users/profile",
-    query_params={"user_id": 42},
-    headers={"authorization": "Bearer token"},
-)
-# result == {"user_id": 42}
+await app.exec("/users/me", headers={"authorization": "Bearer t"})
 ```
 
-### State Management
+App-level dependencies (`FastExec(dependencies=[...])`) run for every workflow; router-level ones run for every workflow in that router.
 
-App-level state is set via `FastExec(state=...)` and accessed through `request.app.state`. Per-request state is passed via `exec(state=...)` and accessed through `request.state`.
+### State
+
+App state is FastAPI-native; per-`exec` state lands on `request.state`:
 
 ```python
-app = FastExec(state={"db_url": "postgres://localhost/mydb"})
+app = FastExec()
+app.state.db = "postgres://localhost/mydb"
 
-pipeline = Pipeline()
-
-@pipeline.register("/info")
+@app.route("/info")
 async def info(request: fastapi.Request):
-    return {
-        "db": request.app.state.db_url,
-        "session": request.state.session_id,
-    }
+    return {"db": request.app.state.db, "session": request.state.session_id}
 
-app.include_pipeline(pipeline)
-
-result = await app.exec("/info", state={"session_id": "abc123"})
-# result == {"db": "postgres://localhost/mydb", "session": "abc123"}
+await app.exec("/info", state={"session_id": "abc123"})
+# -> {"db": "postgres://localhost/mydb", "session": "abc123"}
 ```
 
-### Auto Validation via Type Hints
+### Validation via type hints
 
-Like FastAPI, type annotations drive runtime validation. Pydantic models as parameter types auto-parse the request body; return type annotations auto-filter the response.
+Pydantic models as parameter types auto-parse the body; return-type or `response_model` filters the output.
 
 ```python
 import pydantic
@@ -153,52 +124,73 @@ class UserResponse(pydantic.BaseModel):
     name: str
     email: str
 
-pipeline = Pipeline()
-
-@pipeline.register("/create")
+@app.route("/users/create")
 async def create_user(user: UserCreate) -> UserResponse:
-    # Return extra fields — they'll be stripped by the return type
     return {"name": user.name, "email": user.email, "internal_id": 999}
 
-app = FastExec()
-app.include_pipeline(pipeline, prefix="/users")
-
-result = await app.exec("/users/create", body={"name": "Alice", "email": "alice@example.com"})
-# result == {"name": "Alice", "email": "alice@example.com"}
-# "internal_id" is filtered out by the UserResponse return type
+await app.exec("/users/create", body={"name": "Alice", "email": "a@e.com"})
+# -> {"name": "Alice", "email": "a@e.com"}   (internal_id stripped)
 ```
 
-### Response Model and Status Code
+### Path parameters
 
-Explicit `response_model` and `status_code` can be set on `register()`:
-
-```python
-pipeline.register("/create", create_user, response_model=UserResponse, status_code=201)
-```
-
-### Nested Pipelines
-
-Pipelines can include other pipelines, just like FastAPI's nested routers:
+Routes can be templated, exactly as in FastAPI:
 
 ```python
-child = Pipeline()
+@app.route("/items/{item_id}")
+async def get_item(item_id: int):
+    return {"id": item_id}
 
-@child.register("/detail")
-async def detail():
-    return {"detail": "nested"}
-
-parent = Pipeline()
-parent.include_pipeline(child, prefix="/child")
-
-app = FastExec()
-app.include_pipeline(parent, prefix="/parent")
-
-await app.exec("/parent/child/detail")  # -> {"detail": "nested"}
+await app.exec("/items/42")  # -> {"id": 42}
 ```
 
 ## Examples
 
 See the [tests/](./tests/) folder for comprehensive examples covering all features.
+
+## Visualization
+
+With the `viz` extra (and a system Graphviz install), render a workflow diagram of an app, route, or router:
+
+```python
+from fastexec import viz
+
+viz.visualize(app).render("workflow", format="svg")
+```
+
+The diagram is a cache-aware DAG with execution-order arrows, grouped into app/tag containers. See the [Visualization](docs/concepts/visualization.md) docs.
+
+## Workflow vocabulary
+
+Prefer workflow words? Every name below is an alias for the FastAPI-faithful one — same behaviour, documented as an alias.
+
+| FastAPI-faithful | Workflow alias |
+|---|---|
+| `Router` | `Workflow` |
+| `Depends` | `Task` |
+| `@app.route` | `@app.workflow` |
+| `app.exec(...)` | `app.run(...)` |
+
+```python
+from fastexec import FastExec, Workflow, Task
+
+app = FastExec()
+
+@app.workflow("/process")
+async def process(data=Task(load)):
+    ...
+
+await app.run("/process")
+```
+
+## Migrating from 0.6
+
+v0.7.0 is a breaking redesign — fastexec now subclasses FastAPI:
+
+- **`Pipeline` is gone.** Register workflows directly on the app with `@app.route(...)`. For grouping / shared dependencies / prefix, use `Router` (= `APIRouter`) + `app.include_router(router, prefix=...)`.
+- **`@pipeline.register(...)` → `@app.route(...)` / `@router.route(...)`.**
+- **`FastExec(state={...})` → native `app.state`** (`app.state.db = ...`; read via `request.app.state.db`).
+- **`get_dependant`** is gone from the public API — import FastAPI's directly if needed.
 
 ## Contributing
 
@@ -206,7 +198,7 @@ See the [tests/](./tests/) folder for comprehensive examples covering all featur
 2. **Create** a feature branch and make changes.
 3. **Install** dev requirements:
    ```bash
-   poetry install -E all --with dev
+   make install
    ```
 4. **Run Tests**:
    ```bash

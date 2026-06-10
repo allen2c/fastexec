@@ -1,43 +1,50 @@
-[tool.poetry]
-authors = ["AllenChou <f1470891079@gmail.com>"]
-description = "Execute function with FastAPI features."
+[project]
+authors = [{ name = "AllenChou", email = "f1470891079@gmail.com" }]
+dependencies = ["fastapi[standard]>=0.121.0,<1.0.0"]
+description = "Define and run serverless workflows with FastAPI's dependency injection."
 license = "MIT"
 name = "fastexec"
 readme = "README.md"
-version = "0.6.0"
+requires-python = ">=3.11"
+version = "0.7.0"
 
-[tool.poetry.dependencies]
-fastapi = { extras = ["standard"], version = ">=0.121.0,<1.0.0" }
-python = ">=3.11,<4.0"
-
-[tool.poetry.extras]
-all = []
-
-[tool.poetry.group.dev.dependencies]
-black = { extras = ["jupyter"], version = "*" }
-faker = "*"
-isort = "*"
-networkx = "*"
-plotly = "*"
-poetry-plugin-export = "*"
-pytest = "*"
-pytest-asyncio = "*"
-pytest-cov = "*"
-pytest-xdist = "*"
-pyvis = "*"
-setuptools = ">=69"
-
-[tool.poetry.group.docs.dependencies]
-mkdocs-material = "*"
-mkdocstrings = { extras = ["python"], version = "*" }
-
-[tool.isort]
-profile = "black"
-
-[tool.flake8]
-ignore = ["E203", "E704", "W503"]
-max-line-length = 88
+[project.optional-dependencies]
+dev = [
+  "black",
+  "faker",
+  "graphviz",
+  "isort",
+  "psutil",
+  "pytest",
+  "pytest-asyncio",
+  "pytest-cov",
+  "pytest-xdist",
+  "ruff",
+  "setuptools>=69",
+]
+docs = ["mkdocs-material", "mkdocstrings[python]"]
+viz = ["graphviz"]
 
 [build-system]
-build-backend = "poetry.core.masonry.api"
-requires = ["poetry-core"]
+build-backend = "hatchling.build"
+requires = ["hatchling"]
+
+[tool.ruff]
+line-length = 88
+
+[tool.ruff.lint]
+# Imports are handled by isort; formatting by black. ruff is lint-only here.
+# E203 conflicts with black, so it is ignored (matches the prior flake8 config).
+ignore = ["E203"]
+select = ["E", "F"]
+
+[tool.black]
+line-length = 88
+target-version = ["py311"]
+
+[tool.isort]
+line_length = 88
+profile = "black"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"

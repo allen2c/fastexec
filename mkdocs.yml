@@ -46,8 +46,9 @@ nav:
   - Home: index.md
   - Getting Started: getting-started.md
   - Concepts:
-      - App & Pipeline: concepts/app-pipeline.md
+      - App & Router: concepts/app-router.md
       - Dependency Injection: concepts/dependency-injection.md
       - State Management: concepts/state.md
       - Validation: concepts/validation.md
+      - Visualization: concepts/visualization.md
   - API Reference: api-reference.md

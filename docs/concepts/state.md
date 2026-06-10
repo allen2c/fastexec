@@ -1,15 +1,17 @@
 # State Management
 
-fastexec supports two levels of state, mirroring how FastAPI and Starlette handle state.
+fastexec uses FastAPI/Starlette state directly. There are two levels.
 
 ## App State
 
-Set once at `FastExec` creation. Accessible in any endpoint or dependency via `request.app.state`.
+Set on the native `app.state`. Accessible in any workflow node via `request.app.state`.
 
 ```python
-app = FastExec(state={"db_url": "postgres://localhost/mydb", "env": "production"})
+app = FastExec()
+app.state.db_url = "postgres://localhost/mydb"
+app.state.env = "production"
 
-@pipeline.register("/info")
+@app.route("/info")
 async def info(request: fastapi.Request):
     return {
         "db": request.app.state.db_url,
@@ -26,25 +28,26 @@ Passed per `exec()` call via the `state=` parameter. Accessible via `request.sta
 ```python
 result = await app.exec("/info", state={"session_id": "abc-123", "user_id": 42})
 
-@pipeline.register("/me")
+@app.route("/me")
 async def me(request: fastapi.Request):
     return {"user_id": request.state.user_id}
 ```
 
-Request state is isolated — each `exec()` call gets its own state object. State from one call does not leak into another.
+Request state is isolated — each `exec()` call gets its own state. State from one call does not leak into another.
 
 ## Both Together
 
-App state and request state coexist on the same `Request` object:
+App state and request state coexist on the same `Request`:
 
 ```python
-app = FastExec(state={"db": "postgres://localhost"})
+app = FastExec()
+app.state.db = "postgres://localhost"
 
-@pipeline.register("/context")
+@app.route("/context")
 async def context(request: fastapi.Request):
     return {
-        "db": request.app.state.db,          # app state
-        "session": request.state.session_id,  # request state
+        "db": request.app.state.db,            # app state
+        "session": request.state.session_id,   # request state
     }
 
 result = await app.exec("/context", state={"session_id": "xyz"})
@@ -53,7 +56,7 @@ result = await app.exec("/context", state={"session_id": "xyz"})
 
 ## State in Dependencies
 
-Dependencies have the same access to state as endpoints:
+Nodes (dependencies) have the same access to state as the terminal node:
 
 ```python
 def require_auth(request: fastapi.Request):

@@ -6,12 +6,6 @@
 
 ---
 
-## fastexec.Pipeline
+## fastexec.Router
 
-::: fastexec.Pipeline
-
----
-
-## fastexec.get_dependant
-
-::: fastexec.get_dependant
+::: fastexec.Router
