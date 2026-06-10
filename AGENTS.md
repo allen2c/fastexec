@@ -4,12 +4,14 @@ Guidance for AI agents and contributors working on **fastexec**. Keep changes sm
 
 ## What fastexec is
 
-Execute functions with FastAPI features — dependency injection, validation, response models, layered state — without an HTTP server. The public API is intentionally tiny: `FastExec` (app) and `Pipeline` (router), mirroring FastAPI's `FastAPI()` / `APIRouter`.
+A **serverless workflow engine** whose DAG executor *is* FastAPI's dependency injection: a `Depends()` is a node's input edge, the return value is its output, the dependency graph is the workflow DAG, and `exec(path, ...)` runs it in-process — no HTTP server. The public API is intentionally tiny: `FastExec` (app) and `Router` (optional grouping).
+
+fastexec **subclasses FastAPI**: `FastExec(FastAPI)` (`_app.py`), `Router(APIRouter)` + a `_RouteMixin.route()` verbless decorator (`_routing.py`). `exec()` finds a route via Starlette matching and runs `solve_dependencies` over the route's native `.dependant` (FastAPI already merges app + router + endpoint deps).
 
 ## Core principles
 
-- **Mirror FastAPI.** Same mental model, same `Depends()` / `Query()` / type-hint validation. When unsure how something should behave, match FastAPI.
-- **Reuse FastAPI internals** (`get_dependant`, `solve_dependencies`) instead of reimplementing them.
+- **Be FastAPI.** Inherit FastAPI's objects; behaviour is 100% FastAPI. When unsure how something should behave, it behaves the way FastAPI does.
+- **Don't reinvent what FastAPI lacks.** No custom DAG executor, no parallel node execution, no per-task retries/timeouts. If FastAPI doesn't do it, fastexec doesn't either — that keeps it a thin, honest layer (not Airflow/Prefect).
 - **Minimal surface.** Keep each core module to ≤ 3 main exports. Don't add wrappers, type aliases, or helpers used in only one place — inline them.
 - **No dead config.** A parameter that is accepted but never read is a bug, not a feature.
 
@@ -47,7 +49,7 @@ Always leave the code cleaner than you found it. When you touch a file, fix smal
 
 - **TDD**: write a failing test first, run it to confirm it fails, implement the minimum to pass, then refactor.
 - Name test files by **feature** (`test_core.py`, `test_dependencies.py`), never by phase or version.
-- `pytest-asyncio` runs in auto mode. Long memory/leak tests use `@pytest.mark.stress` and are skipped by default; run them with `pytest -m stress`.
+- `pytest-asyncio` runs in auto mode.
 - All existing tests passing is the regression gate for any refactor — behaviour-preserving changes must keep the suite green.
 
 ## Git
