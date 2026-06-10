@@ -42,6 +42,10 @@ class FastExec(_RouteMixin, fastapi.FastAPI):
         body=None,
         state=None,
     ):
+        """Run the workflow registered at ``path``, in-process.
+
+        Also available as ``run()``. This does NOT start an HTTP server.
+        """
         route, path_params = self._match(path)
 
         _query_params = fastexec.utils.convert.to_query_params(query_params)
@@ -116,3 +120,5 @@ class FastExec(_RouteMixin, fastapi.FastAPI):
                 field=route.response_field, response_content=result
             )
         return result
+
+    run = exec  # workflow-vocabulary alias of exec

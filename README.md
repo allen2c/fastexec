@@ -160,6 +160,29 @@ viz.visualize(app).render("workflow", format="svg")
 
 The diagram is a cache-aware DAG with execution-order arrows, grouped into app/tag containers. See the [Visualization](docs/concepts/visualization.md) docs.
 
+## Workflow vocabulary
+
+Prefer workflow words? Every name below is an alias for the FastAPI-faithful one — same behaviour, documented as an alias.
+
+| FastAPI-faithful | Workflow alias |
+|---|---|
+| `Router` | `Workflow` |
+| `Depends` | `Task` |
+| `@app.route` | `@app.workflow` |
+| `app.exec(...)` | `app.run(...)` |
+
+```python
+from fastexec import FastExec, Workflow, Task
+
+app = FastExec()
+
+@app.workflow("/process")
+async def process(data=Task(load)):
+    ...
+
+await app.run("/process")
+```
+
 ## Migrating from 0.6
 
 v0.7.0 is a breaking redesign — fastexec now subclasses FastAPI:

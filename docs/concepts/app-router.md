@@ -80,3 +80,28 @@ result = await app.exec(
     state={"session_id": "abc"},     # per-exec request.state
 )
 ```
+
+## Workflow vocabulary
+
+Each name below is an alias for the FastAPI-faithful one — same behaviour, documented as an alias. Use whichever reads better.
+
+| FastAPI-faithful | Workflow alias |
+|---|---|
+| `Router` | `Workflow` |
+| `Depends` | `Task` |
+| `@app.route` | `@app.workflow` |
+| `app.exec(...)` | `app.run(...)` |
+
+```python
+from fastexec import FastExec, Workflow, Task
+
+orders = Workflow()
+
+@orders.workflow("/process")
+async def process(data=Task(load)):
+    ...
+
+app = FastExec()
+app.include_router(orders, prefix="/orders")
+await app.run("/orders/process")
+```
