@@ -99,3 +99,32 @@ def test_unknown_path_raises_lookuperror():
     app = _build_app()
     with pytest.raises(LookupError):
         viz.visualize(app, path="/nope")
+
+
+def test_visualize_router_has_router_container_no_app_state():
+    router = Router()
+
+    @router.route("/p")
+    async def p():
+        return {}
+
+    g = viz.visualize(router)
+    assert "subgraph cluster_outer" in g.source
+    assert "label=router" in g.source  # outer container labelled "router"
+    assert "app state" not in g.source  # no app state without an app
+
+
+def test_path_with_router_raises_typeerror():
+    router = Router()
+
+    @router.route("/p")
+    async def p():
+        return {}
+
+    with pytest.raises(TypeError):
+        viz.visualize(router, path="/p")
+
+
+def test_unsupported_target_raises_typeerror():
+    with pytest.raises(TypeError):
+        viz.visualize(object())

@@ -16,6 +16,7 @@ except ImportError as e:  # pragma: no cover
 import fastapi.routing
 
 from fastexec._app import FastExec
+from fastexec._routing import Router
 
 _FILL = {
     "route": "#9ecae1",
@@ -105,6 +106,11 @@ def _collect(target, path):
             routes = all_routes
         state_keys = list(getattr(target.state, "_state", {}))
         return routes, "app", state_keys
+    if isinstance(target, Router):
+        if path is not None:
+            raise TypeError("path is only valid with a FastExec target")
+        routes = [r for r in target.routes if isinstance(r, fastapi.routing.APIRoute)]
+        return routes, "router", []
     raise TypeError(f"Cannot visualize {type(target).__name__}")
 
 
