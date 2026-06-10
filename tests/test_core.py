@@ -172,3 +172,14 @@ def test_register_rejects_unknown_kwargs():
 
     with pytest.raises(TypeError):
         pipeline.register("/x", handler, bogus=1)
+
+
+def test_get_dependant_not_in_public_api():
+    """get_dependant is no longer a top-level export."""
+    import fastexec
+
+    assert "get_dependant" not in fastexec.__all__
+    assert not hasattr(fastexec, "get_dependant")
+
+    # Still importable for advanced use.
+    from fastexec._exec import get_dependant  # noqa: F401
