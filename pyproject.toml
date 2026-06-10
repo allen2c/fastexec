@@ -12,6 +12,7 @@ version = "0.7.0"
 dev = [
   "black",
   "faker",
+  "graphviz",
   "isort",
   "psutil",
   "pytest",
