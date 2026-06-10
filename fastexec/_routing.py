@@ -1,3 +1,6 @@
+import fastapi
+
+
 class _RouteMixin:
     """Verbless route registration, shared by FastExec and Router."""
 
@@ -11,3 +14,7 @@ class _RouteMixin:
             return func
 
         return decorator
+
+
+class Router(_RouteMixin, fastapi.APIRouter):
+    """Optional grouping of workflows with shared dependencies + prefix."""
