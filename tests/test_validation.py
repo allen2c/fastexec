@@ -45,40 +45,8 @@ async def test_response_model():
 
 
 @pytest.mark.asyncio
-async def test_status_code_default():
-    """Default status code is 200."""
-    app = FastExec()
-    pipeline = Pipeline()
-
-    async def handler():
-        return {"ok": True}
-
-    pipeline.register("/ok", handler)
-    app.include_pipeline(pipeline)
-
-    response = await app.exec("/ok")
-    assert response == {"ok": True}
-
-
-@pytest.mark.asyncio
-async def test_status_code_custom():
-    """Endpoint can declare a custom status_code."""
-    app = FastExec()
-    pipeline = Pipeline()
-
-    async def create_item():
-        return {"id": 1, "name": "Widget"}
-
-    pipeline.register("/items", create_item, status_code=201)
-    app.include_pipeline(pipeline)
-
-    response = await app.exec("/items")
-    assert response == {"id": 1, "name": "Widget"}
-
-
-@pytest.mark.asyncio
-async def test_response_model_with_status_code():
-    """response_model and status_code work together."""
+async def test_response_model_filters_extra_fields():
+    """response_model strips fields not declared on the model."""
 
     class ItemOut(pydantic.BaseModel):
         id: int
@@ -90,7 +58,7 @@ async def test_response_model_with_status_code():
     async def create_item():
         return {"id": 1, "name": "Widget", "internal_note": "strip_this"}
 
-    pipeline.register("/items", create_item, response_model=ItemOut, status_code=201)
+    pipeline.register("/items", create_item, response_model=ItemOut)
     app.include_pipeline(pipeline)
 
     result = await app.exec("/items")

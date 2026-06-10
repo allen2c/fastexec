@@ -158,3 +158,17 @@ async def test_exec_unknown_path_raises():
 
     with pytest.raises(LookupError):
         await app.exec("/nonexistent")
+
+
+# --- API surface ---
+
+
+def test_register_rejects_unknown_kwargs():
+    """register() raises TypeError on unknown keyword arguments (no silent swallow)."""
+    pipeline = Pipeline()
+
+    async def handler():
+        return {}
+
+    with pytest.raises(TypeError):
+        pipeline.register("/x", handler, bogus=1)

@@ -4,7 +4,6 @@ import typing
 class RouteConfig(typing.NamedTuple):
     endpoint: typing.Callable
     response_model: typing.Optional[typing.Any] = None
-    status_code: int = 200
 
 
 class Pipeline:
@@ -22,14 +21,11 @@ class Pipeline:
         endpoint: typing.Optional[typing.Callable] = None,
         *,
         response_model: typing.Optional[typing.Any] = None,
-        status_code: int = 200,
-        **kwargs,
     ):
         if endpoint is not None:
             self._routes[path] = RouteConfig(
                 endpoint=endpoint,
                 response_model=response_model,
-                status_code=status_code,
             )
             return endpoint
 
@@ -38,7 +34,6 @@ class Pipeline:
             self._routes[path] = RouteConfig(
                 endpoint=func,
                 response_model=response_model,
-                status_code=status_code,
             )
             return func
 

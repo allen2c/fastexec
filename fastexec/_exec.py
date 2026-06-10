@@ -27,7 +27,6 @@ class _RouteInfo(typing.NamedTuple):
     endpoint: typing.Callable
     pipeline_dependencies: typing.List
     response_model: typing.Optional[typing.Any] = None
-    status_code: int = 200
 
 
 class _State:
@@ -65,7 +64,6 @@ class FastExec:
                 endpoint=route_config.endpoint,
                 pipeline_dependencies=list(pipeline.dependencies),
                 response_model=route_config.response_model,
-                status_code=route_config.status_code,
             )
 
     async def exec(
