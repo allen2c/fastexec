@@ -202,6 +202,18 @@ await app.exec("/parent/child/detail")  # -> {"detail": "nested"}
 
 See the [tests/](./tests/) folder for comprehensive examples covering all features.
 
+## Visualization
+
+With the `viz` extra (and a system Graphviz install), render a route/pipeline/app's dependency-injection graph:
+
+```python
+from fastexec import viz
+
+viz.visualize(app).render("deps", format="svg")
+```
+
+The graph is cache-aware — shared dependencies collapse to one node, and `use_cache=False` deps are drawn distinct. See the [Visualization](docs/concepts/visualization.md) docs.
+
 ## Migrating from 0.6
 
 Two breaking changes:

@@ -50,4 +50,5 @@ nav:
       - Dependency Injection: concepts/dependency-injection.md
       - State Management: concepts/state.md
       - Validation: concepts/validation.md
+      - Visualization: concepts/visualization.md
   - API Reference: api-reference.md
