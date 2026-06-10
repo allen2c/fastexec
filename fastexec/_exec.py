@@ -29,6 +29,12 @@ class _RouteInfo(typing.NamedTuple):
     response_model: typing.Optional[typing.Any] = None
 
 
+class _CompiledRoute(typing.NamedTuple):
+    dependant: fastapi.dependencies.models.Dependant
+    response_model: typing.Optional[typing.Any]
+    type_adapter: typing.Optional[pydantic.TypeAdapter]
+
+
 class _State:
     """Attribute-access wrapper for state dict, similar to Starlette's State."""
 
@@ -51,6 +57,12 @@ class FastExec:
         self._state_dict = state or {}
         self.dependencies = list(dependencies or [])
         self._routes: typing.Dict[str, _RouteInfo] = {}
+        self._compiled: typing.Dict[str, _CompiledRoute] = {}
+
+        # Reusable app instance — holds app-level state; built once, not per exec.
+        self._app_instance = fastapi.FastAPI()
+        for key, value in self._state_dict.items():
+            setattr(self._app_instance.state, key, value)
 
     def include_pipeline(
         self,
@@ -66,6 +78,36 @@ class FastExec:
                 response_model=route_config.response_model,
             )
 
+    def _compile_route(self, path: str, route: _RouteInfo) -> _CompiledRoute:
+        # Merge layered dependencies once: app guards + pipeline guards + endpoint.
+        # `get_dependant` returns a fresh Dependant, so mutating it here is safe —
+        # this runs exactly once per path (cached by exec).
+        dependant = get_dependant(path=path, call=route.endpoint)
+        guards = []
+        for dep in self.dependencies:
+            guards.append(get_dependant(path=path, call=dep.dependency))
+        for dep in route.pipeline_dependencies:
+            guards.append(get_dependant(path=path, call=dep.dependency))
+        dependant.dependencies = guards + dependant.dependencies
+
+        # Effective response_model: explicit > return type annotation.
+        response_model = route.response_model
+        if response_model is None:
+            return_annotation = typing.get_type_hints(route.endpoint).get("return")
+            if return_annotation is not None and return_annotation is not type(None):
+                response_model = return_annotation
+
+        type_adapter = (
+            pydantic.TypeAdapter(response_model)
+            if response_model is not None
+            else None
+        )
+        return _CompiledRoute(
+            dependant=dependant,
+            response_model=response_model,
+            type_adapter=type_adapter,
+        )
+
     async def exec(
         self,
         path: str,
@@ -79,31 +121,17 @@ class FastExec:
         if route is None:
             raise LookupError(f"No endpoint registered for path: {path}")
 
+        compiled = self._compiled.get(path)
+        if compiled is None:
+            compiled = self._compile_route(path, route)
+            self._compiled[path] = compiled
+
         endpoint = route.endpoint
-        dependant = get_dependant(path=path, call=endpoint)
+        dependant = compiled.dependant
+        response_model = compiled.response_model
+        app_instance = self._app_instance
 
-        # Merge layered dependencies: app → pipeline → endpoint
-        # App and pipeline deps are prepended as "guard" dependencies
-        extra_deps = []
-        for dep in self.dependencies:
-            extra_deps.append(get_dependant(path=path, call=dep.dependency))
-        for dep in route.pipeline_dependencies:
-            extra_deps.append(get_dependant(path=path, call=dep.dependency))
-        dependant.dependencies = extra_deps + dependant.dependencies
-
-        # Build mock app with app-level state
-        app_instance = fastapi.FastAPI()
-        for key, value in self._state_dict.items():
-            setattr(app_instance.state, key, value)
-
-        # Determine effective response_model: explicit > return type annotation
-        response_model = route.response_model
-        if response_model is None:
-            return_annotation = typing.get_type_hints(endpoint).get("return")
-            if return_annotation is not None and return_annotation is not type(None):
-                response_model = return_annotation
-
-        # Build request
+        # Build request (per-request state — never cached)
         _query_params = fastexec.utils.convert.to_query_params(query_params)
         _headers = fastexec.utils.convert.to_headers(headers)
         if isinstance(body, list):
@@ -168,9 +196,9 @@ class FastExec:
                     endpoint, **solved.values
                 )
 
-        # Apply response_model filtering
+        # Apply response_model filtering using the cached adapter
         if response_model is not None and not isinstance(result, fastapi.Response):
-            adapter = pydantic.TypeAdapter(response_model)
+            adapter = compiled.type_adapter
             validated = adapter.validate_python(result)
             result = adapter.dump_python(validated, mode="python")
 
