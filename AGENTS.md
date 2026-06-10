@@ -8,6 +8,8 @@ A **serverless workflow engine** whose DAG executor *is* FastAPI's dependency in
 
 fastexec **subclasses FastAPI**: `FastExec(FastAPI)` (`_app.py`), `Router(APIRouter)` + a `_RouteMixin.route()` verbless decorator (`_routing.py`). `exec()` finds a route via Starlette matching and runs `solve_dependencies` over the route's native `.dependant` (FastAPI already merges app + router + endpoint deps).
 
+**Optional add-ons live in their own module behind an extra.** `fastexec.viz` (a workflow-diagram renderer) is used via `from fastexec import viz`, lazy-imports `graphviz`, and is declared under the `viz` extra — so core never depends on it and `__all__` stays `FastExec` / `Router`. Follow this pattern for any heavy/optional dependency.
+
 ## Core principles
 
 - **Be FastAPI.** Inherit FastAPI's objects; behaviour is 100% FastAPI. When unsure how something should behave, it behaves the way FastAPI does.
