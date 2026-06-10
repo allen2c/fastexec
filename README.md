@@ -148,6 +148,18 @@ await app.exec("/items/42")  # -> {"id": 42}
 
 See the [tests/](./tests/) folder for comprehensive examples covering all features.
 
+## Visualization
+
+With the `viz` extra (and a system Graphviz install), render a workflow diagram of an app, route, or router:
+
+```python
+from fastexec import viz
+
+viz.visualize(app).render("workflow", format="svg")
+```
+
+The diagram is a cache-aware DAG with execution-order arrows, grouped into app/tag containers. See the [Visualization](docs/concepts/visualization.md) docs.
+
 ## Migrating from 0.6
 
 v0.7.0 is a breaking redesign — fastexec now subclasses FastAPI:
