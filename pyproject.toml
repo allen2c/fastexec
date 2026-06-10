@@ -12,7 +12,9 @@ version = "0.7.0"
 dev = [
   "black",
   "faker",
+  "graphviz",
   "isort",
+  "psutil",
   "pytest",
   "pytest-asyncio",
   "pytest-cov",
@@ -33,16 +35,16 @@ line-length = 88
 [tool.ruff.lint]
 # Imports are handled by isort; formatting by black. ruff is lint-only here.
 # E203 conflicts with black, so it is ignored (matches the prior flake8 config).
-select = ["E", "F"]
 ignore = ["E203"]
+select = ["E", "F"]
 
 [tool.black]
 line-length = 88
 target-version = ["py311"]
 
 [tool.isort]
-profile = "black"
 line_length = 88
+profile = "black"
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
