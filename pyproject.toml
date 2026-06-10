@@ -10,7 +10,9 @@ version = "0.7.0"
 
 [project.optional-dependencies]
 dev = [
+  "black",
   "faker",
+  "isort",
   "psutil",
   "pytest",
   "pytest-asyncio",
@@ -30,7 +32,18 @@ requires = ["hatchling"]
 line-length = 88
 
 [tool.ruff.lint]
-select = ["E", "F", "I"]
+# Imports are handled by isort; formatting by black. ruff is lint-only here.
+# E203 conflicts with black, so it is ignored (matches the prior flake8 config).
+select = ["E", "F"]
+ignore = ["E203"]
+
+[tool.black]
+line-length = 88
+target-version = ["py311"]
+
+[tool.isort]
+profile = "black"
+line_length = 88
 
 [tool.pytest.ini_options]
 addopts = ["-m", "not stress"]

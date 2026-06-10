@@ -1,6 +1,7 @@
 # Development
 fmt:
-	@ruff format fastexec tests
+	@isort fastexec tests
+	@black fastexec tests
 	@ruff check --fix fastexec tests
 
 install:
