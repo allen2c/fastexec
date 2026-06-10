@@ -1,6 +1,6 @@
 # fastexec
 
-**Version:** 0.6.0
+**Version:** 0.7.0
 **License:** [MIT](LICENSE)
 
 Execute functions with FastAPI features—dependency injection, validation, response models, and more—without running a full server.
@@ -8,6 +8,8 @@ Execute functions with FastAPI features—dependency injection, validation, resp
 ## Summary
 
 **fastexec** lets you build and execute function pipelines using the same patterns as FastAPI: dependency injection via `Depends()`, Pydantic validation via type hints, response model filtering, and layered state management. No HTTP server required.
+
+Each route's dependency graph and response adapter are compiled once and reused, so calling `exec()` repeatedly — in a loop, batch job, or tool-calling agent — stays cheap.
 
 Use cases:
 

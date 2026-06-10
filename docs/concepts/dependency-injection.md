@@ -64,6 +64,14 @@ async def handler(
 
 Caching is scoped to the request — the next `exec()` call starts fresh.
 
+## Compilation Caching
+
+The first time you `exec()` a path, fastexec compiles that route's dependency graph (the merged app → pipeline → endpoint `Depends()` tree) and its response-model adapter, then reuses them on every later call to the same path. Running `exec()` in a loop does not rebuild them.
+
+This caches the *structure*, not the *values* — your dependency functions still run on every call (the request-scope caching above is per-`exec()`, unchanged). Only the wiring is reused.
+
+Because compilation is frozen after the first call to a path, register all routes and set app/pipeline dependencies **before** the first `exec()`.
+
 ## Accessing State in Dependencies
 
 Dependencies receive the full `Request` object, so they can read app state and request state:
