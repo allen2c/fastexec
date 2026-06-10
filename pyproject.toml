@@ -1,43 +1,35 @@
-[tool.poetry]
-authors = ["AllenChou <f1470891079@gmail.com>"]
+[project]
+authors = [{ name = "AllenChou", email = "f1470891079@gmail.com" }]
+dependencies = ["fastapi[standard]>=0.121.0,<1.0.0"]
 description = "Execute function with FastAPI features."
 license = "MIT"
 name = "fastexec"
 readme = "README.md"
+requires-python = ">=3.11"
 version = "0.6.0"
 
-[tool.poetry.dependencies]
-fastapi = { extras = ["standard"], version = ">=0.121.0,<1.0.0" }
-python = ">=3.11,<4.0"
-
-[tool.poetry.extras]
-all = []
-
-[tool.poetry.group.dev.dependencies]
-black = { extras = ["jupyter"], version = "*" }
-faker = "*"
-isort = "*"
-networkx = "*"
-plotly = "*"
-poetry-plugin-export = "*"
-pytest = "*"
-pytest-asyncio = "*"
-pytest-cov = "*"
-pytest-xdist = "*"
-pyvis = "*"
-setuptools = ">=69"
-
-[tool.poetry.group.docs.dependencies]
-mkdocs-material = "*"
-mkdocstrings = { extras = ["python"], version = "*" }
-
-[tool.isort]
-profile = "black"
-
-[tool.flake8]
-ignore = ["E203", "E704", "W503"]
-max-line-length = 88
+[project.optional-dependencies]
+dev = [
+  "faker",
+  "psutil",
+  "pytest",
+  "pytest-asyncio",
+  "pytest-cov",
+  "pytest-xdist",
+  "ruff",
+  "setuptools>=69",
+]
+docs = ["mkdocs-material", "mkdocstrings[python]"]
 
 [build-system]
-build-backend = "poetry.core.masonry.api"
-requires = ["poetry-core"]
+build-backend = "hatchling.build"
+requires = ["hatchling"]
+
+[tool.ruff]
+line-length = 88
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"

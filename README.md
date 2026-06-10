@@ -206,7 +206,7 @@ See the [tests/](./tests/) folder for comprehensive examples covering all featur
 2. **Create** a feature branch and make changes.
 3. **Install** dev requirements:
    ```bash
-   poetry install -E all --with dev
+   make install
    ```
 4. **Run Tests**:
    ```bash

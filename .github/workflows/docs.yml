@@ -20,11 +20,8 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install Poetry
-        run: pip install poetry
-
       - name: Install dependencies
-        run: poetry install --with docs
+        run: pip install -e ".[docs]"
 
       - name: Deploy docs
-        run: poetry run mkdocs gh-deploy --force
+        run: mkdocs gh-deploy --force

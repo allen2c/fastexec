@@ -1,15 +1,13 @@
 # Development
-format-all:
-	@isort fastexec tests
-	@black fastexec tests
+fmt:
+	@ruff format fastexec tests
+	@ruff check --fix fastexec tests
 
-install-all:
-	poetry install --all-extras --all-groups
+install:
+	pip install -e ".[dev,docs]"
 
-update-all:
+update:
 	poetry update
-	poetry export --without-hashes -f requirements.txt --output requirements.txt
-	poetry export --without-hashes -f requirements.txt --output requirements-all.txt --all-extras --all-groups
 
 # Docs
 mkdocs:
