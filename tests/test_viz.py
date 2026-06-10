@@ -128,3 +128,15 @@ def test_path_with_router_raises_typeerror():
 def test_unsupported_target_raises_typeerror():
     with pytest.raises(TypeError):
         viz.visualize(object())
+
+
+def test_legend_off_by_default():
+    g = viz.visualize(_build_app())
+    assert "Legend" not in g.source
+    assert "cluster_legend" not in g.source
+
+
+def test_legend_on_when_requested():
+    g = viz.visualize(_build_app(), legend=True)
+    assert "Legend" in g.source
+    assert "cluster_legend" in g.source

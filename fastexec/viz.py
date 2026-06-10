@@ -26,8 +26,11 @@ _FILL = {
 _CAPTION = "arrows follow execution order — a dependency points to what uses it"
 
 
-def visualize(target, *, path=None):
-    """Render a fastexec app / route / router as a workflow Digraph."""
+def visualize(target, *, path=None, legend=False):
+    """Render a fastexec app / route / router as a workflow Digraph.
+
+    Pass ``legend=True`` to include a colour/marker legend (off by default).
+    """
     routes, outer_label, state_keys = _collect(target, path)
 
     nodes = {}  # key -> {"id", "label", "attrs"}
@@ -89,7 +92,12 @@ def visualize(target, *, path=None):
     for child_id, parent_id in edges:
         dot.edge(child_id, parent_id)
 
-    _add_legend(dot, used_markers, bool(state_keys))
+    if legend:
+        parent_ids = {p for _, p in edges}
+        top_ids = [n["id"] for n in nodes.values() if n["id"] not in parent_ids]
+        _add_legend(
+            dot, used_markers, bool(state_keys), top_ids[0] if top_ids else None
+        )
     return dot
 
 
@@ -150,7 +158,7 @@ def _attrs(dep, kind):
     return attrs
 
 
-def _add_legend(dot, used_markers, has_state):
+def _add_legend(dot, used_markers, has_state, anchor):
     items = [
         ("legend_route", "route / endpoint", {"fillcolor": _FILL["route"]}),
         ("legend_dep", "dependency (node)", {"fillcolor": _FILL["dep"]}),
@@ -184,3 +192,6 @@ def _add_legend(dot, used_markers, has_state):
         for nid, label, attrs in items:
             attrs.setdefault("style", "filled")
             legend.node(nid, label=label, fontsize="9", margin="0.05,0.03", **attrs)
+    if anchor is not None:
+        # Rank the legend at the top, above the graph's first (source) node.
+        dot.edge(items[0][0], anchor, style="invis")

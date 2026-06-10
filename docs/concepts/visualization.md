@@ -15,6 +15,7 @@ from fastexec import viz
 g = viz.visualize(app)                    # whole app
 g = viz.visualize(app, path="/users/me")  # one route
 g = viz.visualize(router)                 # a router in isolation
+g = viz.visualize(app, legend=True)       # add a legend (off by default)
 
 g                          # auto-renders as SVG in Jupyter
 g.render("workflow", format="svg")        # write workflow.svg
